@@ -1,0 +1,28 @@
+#!/bin/sh
+
+echo "Configuring wasflash..."
+
+# Default compiler
+CXX=${CXX:-g++}
+CXXFLAGS="-std=c++20 -Wall -Wextra -O2 -fsanitize=address"
+INCLUDE_PATHS="-I./include/zlib/include"
+LDFLAGS="-L./include/zlib/lib -lz"
+
+# Default install prefix (system)
+PREFIX=${PREFIX:-/usr/local}
+
+# Build directory (local compilation)
+BUILD_DIR="build"
+
+sed \
+    -e "s|@CXX@|$CXX|g" \
+    -e "s|@CXXFLAGS@|$CXXFLAGS|g" \
+    -e "s|@INCLUDE_PATHS@|$INCLUDE_PATHS|g" \
+    -e "s|@LDFLAGS@|$LDFLAGS|g" \
+    -e "s|@PREFIX@|$PREFIX|g" \
+    -e "s|@BUILD_DIR@|$BUILD_DIR|g" \
+    Makefile.in > Makefile
+
+echo "Configuration complete."
+echo "Run 'make' to build locally in $BUILD_DIR."
+echo "Run 'make install' to install to $PREFIX."

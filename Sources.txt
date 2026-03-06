@@ -1,0 +1,7 @@
+https://open-flash.github.io/mirrors/swf-spec-19.pdf
+
+https://blog.jyotiprakash.org/file-compression-and-decompression-in-c-using-zlib
+
+https://www.zlib.net/manual.html
+
+https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github

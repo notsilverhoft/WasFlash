@@ -1,0 +1,39 @@
+CXX = @CXX@
+CXXFLAGS = @CXXFLAGS@
+LDFLAGS = @LDFLAGS@
+INCLUDE_PATHS = @INCLUDE_PATHS@
+BUILD_DIR = @BUILD_DIR@
+PREFIX = @PREFIX@
+
+# Find all .cpp files recursively
+SRC = $(shell find src -name '*.cpp')
+
+# Object files in build/ with same folder structure
+OBJ = $(patsubst src/%,$(BUILD_DIR)/%,$(SRC:.cpp=.o))
+
+TARGET = wasflash
+TARGET_PATH = $(BUILD_DIR)/$(TARGET)
+
+all: $(TARGET_PATH)
+
+# Make sure build directories exist
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Compile each source file individually
+$(OBJ): $(BUILD_DIR)/%.o : src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDE_PATHS) -c $< -o $@
+
+# Link binary after compiling all objects
+$(TARGET_PATH): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+install: $(TARGET_PATH)
+	mkdir -p $(PREFIX)/bin
+	cp $(TARGET_PATH) $(PREFIX)/bin/$(TARGET)
+
+clean:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all clean install
