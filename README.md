@@ -7,7 +7,9 @@ A (Hopefully) Fully Featured Flash Player Replacement, designed for both PC and 
 ## Goals & Progress
 
 - [ ] Finish header parsing
-      |___ -[ ] LZMA Parsing
+  - [ ] LZMA Decompression
+  - [ ] FrameRate
+  - [ ] FrameCount
 - [ ] Work on low-level tag parsing
 - [ ] Work on higher-level tag parsing
 - [ ] Work on low-level tag interpretation
