@@ -4,6 +4,9 @@ A (Hopefully) Fully Featured Flash Player Replacement, designed for both PC and 
 
 ---
 
+## What is Flash Player?
+Flash Player was an old plugin for chrome browsers that would allow users to run SWF files directly off of websites. This was used for games, videos, and even physics simulations. Some of my favorite examples, were the Papa's Games. In fact, Papa's Scooperia is my entire motivation to create this, as I used to play it as a kid. The point is, people loved the games that came out of Flash, and when Adobe discontinued the plugin, many of us were devistated.
+
 ## Goals & Progress
 
 - [ ] Finish header parsing
