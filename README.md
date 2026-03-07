@@ -10,7 +10,7 @@ Flash Player was an old plugin for chrome browsers that would allow users to run
 ## Goals & Progress
 
 - [ ] Finish header parsing
-  - [ ] LZMA Decompression
+  - [x] LZMA Decompression
   - [ ] FrameRate
   - [ ] FrameCount
 - [ ] Work on low-level tag parsing
