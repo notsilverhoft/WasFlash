@@ -59,6 +59,27 @@ void throwErr(int errorCode, char* Filename, int SWFVersion) {
             exit(46);
         break;
 
+        case 51:
+            std::cerr << "LZMA Initialization failed with Error: MEM_ERROR!\n";
+        break;
+
+        case 52:
+            std::cerr << "LZMA Initialization failed with Error: OPTIONS_ERROR!\n";
+        break;
+
+        case 53:
+            std::cerr << "LZMA Decompression failed with Error: DATA_ERROR!\n";
+        break;
+
+        case 54:
+            std::cerr << "LZMA Decompression failed with Error: BUF_ERROR!\n";
+        break;
+
+        case 55:
+            std::cerr << "LZMA Decompression failed with Error: MEM_ERROR (during decode)!\n";
+        break;
+
+
     }
 
 }

@@ -59,6 +59,47 @@ uint32_t getSWFFileLength(std::vector<uint8_t> SWFFile) {
 
 }
 
+uint32_t getSWFCompressedLength(std::vector<uint8_t> SWFFile) {
+
+    uint8_t binOne = SWFFile[8];
+    uint8_t binTwo = SWFFile[9];
+    uint8_t binThree = SWFFile[10];
+    uint8_t binFour = SWFFile[11];
+    uint32_t binOut = static_cast<uint32_t>((binFour << 24) | (binThree << 16) | (binTwo << 8) | (binOne)); //Little Endian
+
+    return binOut;
+
+}
+
+LZMA getLzmaOptions(std::vector<uint8_t> SWFFile) {
+
+    LZMA binOut;
+    std::vector<uint8_t> properties;
+
+    uint8_t binOne = SWFFile[12]; //Properties
+
+    uint8_t oneOut = binOne % 9; //lc
+    uint8_t twoOut = (binOne / 9) % 5; //lp
+    uint8_t threeOut = binOne / 45; //pb
+
+    uint8_t binTwo = SWFFile[9];
+    uint8_t binThree = SWFFile[10];
+    uint8_t binFour = SWFFile[11];
+    uint8_t binFive = SWFFile[12];
+    
+    uint32_t fourOut = static_cast<uint32_t>((binFive << 24) | (binFour << 16) | (binThree << 8) | (binTwo)); //Little Endian
+
+    properties.push_back(oneOut);
+    properties.push_back(twoOut);
+    properties.push_back(threeOut);
+    
+    binOut.LZMAProperties = properties;
+    binOut.LZMADictionary = fourOut;
+
+    return binOut;
+
+}
+
 void errorChecker(int type, char* Filename, int SWFType, int SWFVersion) {
 
 
@@ -131,6 +172,13 @@ SWFHeader getSWFHeader(std::vector<uint8_t>& SWFFile, char* Filename) {
             std::cout << "Decompression: File is Compressed with ZLIB! Decompressing...\n";
             SWFFile = decompressSWF(SWFFile, binOut.SWFFileLength, 1);
             std::cout << "Decompression: Done! Continue...\n";
+            binOut.FrameSize = getRect(SWFFile);
+        break;
+
+        case 2:
+            binOut.SWFCompressedLength = getSWFCompressedLength(SWFFile);
+            binOut.lzProperties = getLzmaOptions(SWFFile);
+            SWFFile = decompressSWF(SWFFile, binOut.SWFFileLength, 2, binOut.SWFCompressedLength, binOut.lzProperties);
             binOut.FrameSize = getRect(SWFFile);
         break;
 
