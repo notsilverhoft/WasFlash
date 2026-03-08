@@ -17,7 +17,9 @@ struct SWFHeader {
     uint32_t SWFFileLength;
     uint32_t SWFCompressedLength; //Only for LZMA
     LZMA lzProperties; //Only for LZMA if you didn't already guess...
-    RECT FrameSize;
+    RECT SWFFrameSize;
+    float SWFFrameRate;
+    uint16_t SWFFrameCount;
 };
 
 int getSWFType(std::vector<uint8_t> SWFFile); 

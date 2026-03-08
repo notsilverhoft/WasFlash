@@ -4,6 +4,7 @@
 #include <string>
 #include "header.h"
 #include "decomp.h"
+#include "../utils/trackSWF.h"
 #include "../utils/errcodes.h"
 #include "../base/rect.h"
 
@@ -100,6 +101,32 @@ LZMA getLzmaOptions(std::vector<uint8_t> SWFFile) {
 
 }
 
+float getSWFFrameRate(std::vector<uint8_t>& SWFFile) {
+
+    uint8_t binOne = SWFFile[0];
+    uint8_t binTwo = SWFFile[1];
+
+    float binOut = static_cast<float>(((binTwo << 8) | (binOne)) / 256.0f);
+
+    SWFShift(SWFFile, 2);
+
+    return binOut;
+
+}
+
+uint16_t getSWFFrameCount(std::vector<uint8_t>& SWFFile) {
+
+    uint8_t binOne = SWFFile[0];
+    uint8_t binTwo = SWFFile[1];
+
+    uint16_t binOut = static_cast<uint16_t>(((binTwo << 8) | (binOne)));
+
+    SWFShift(SWFFile, 2);
+
+    return binOut;
+
+}
+
 void errorChecker(int type, char* Filename, int SWFType, int SWFVersion) {
 
 
@@ -165,30 +192,37 @@ SWFHeader getSWFHeader(std::vector<uint8_t>& SWFFile, char* Filename) {
 
         case 0:
             std::cout << "Decompression: File is Uncompressed(FWS)! Continue...\n";
-            binOut.FrameSize = getRect(SWFFile, true);
+            binOut.SWFFrameSize = getRect(SWFFile, true);
         break;
 
         case 1:
             std::cout << "Decompression: File is Compressed with ZLIB! Decompressing...\n";
             SWFFile = decompressSWF(SWFFile, binOut.SWFFileLength, 1);
             std::cout << "Decompression: Done! Continue...\n";
-            binOut.FrameSize = getRect(SWFFile);
+            binOut.SWFFrameSize = getRect(SWFFile);
         break;
 
         case 2:
             binOut.SWFCompressedLength = getSWFCompressedLength(SWFFile);
             binOut.lzProperties = getLzmaOptions(SWFFile);
             SWFFile = decompressSWF(SWFFile, binOut.SWFFileLength, 2, binOut.SWFCompressedLength, binOut.lzProperties);
-            binOut.FrameSize = getRect(SWFFile);
+            binOut.SWFFrameSize = getRect(SWFFile);
         break;
 
     }
 
-    std::cout << "XMin: " << binOut.FrameSize.xMin / 20 << "\n";
-    std::cout << "XMax: " << binOut.FrameSize.xMax / 20 << "\n";
-    std::cout << "YMin: " << binOut.FrameSize.yMin / 20 << "\n";
-    std::cout << "YMax: " << binOut.FrameSize.yMax / 20 << "\n";
     
+
+    std::cout << "XMin: " << binOut.SWFFrameSize.xMin / 20 << "\n";
+    std::cout << "XMax: " << binOut.SWFFrameSize.xMax / 20 << "\n";
+    std::cout << "YMin: " << binOut.SWFFrameSize.yMin / 20 << "\n";
+    std::cout << "YMax: " << binOut.SWFFrameSize.yMax / 20 << "\n";
+
+    binOut.SWFFrameRate = getSWFFrameRate(SWFFile);
+    std::cout << "Frame Rate: " << binOut.SWFFrameRate << "\n";
+
+    binOut.SWFFrameCount = getSWFFrameCount(SWFFile);
+    std::cout << "Frame Count: " << binOut.SWFFrameCount << "\n";
 
     return binOut;
 }

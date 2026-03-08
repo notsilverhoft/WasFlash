@@ -6,14 +6,12 @@
 #include "rect.h"
 #include "../utils/trackSWF.h"
 
-RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSheaderRect) {
+RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSHeaderRect) {
 
     RECT binOut;
-    int neededBytes;
-    int neededValues;
     int fileByte;
 
-    if ( FWSheaderRect ) {
+    if ( FWSHeaderRect ) {
 
         fileByte = 8;
 
@@ -33,20 +31,15 @@ RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSheaderRect) {
 
     }
 
-    SWFShift(SWFFile, fileByte + 8);
-    fileByte = 0;
+    int secondOffset = fileByte + 8;
 
-    uint64_t buffer2 = static_cast<uint64_t>(SWFFile[fileByte]);
+    uint64_t buffer2 = static_cast<uint64_t>(SWFFile[secondOffset]);
 
     for (int i = 1; i < 8; i++) {
 
-        buffer2 = ((buffer2 << 8) | (SWFFile[fileByte + i]));
+        buffer2 = ((buffer2 << 8) | (SWFFile[secondOffset + i]));
 
     }
-    SWFShift(SWFFile, fileByte + 8);
-    fileByte = 0;
-    
-SWFShift(SWFFile, fileByte + 8);
 
     uint8_t bitstream[16];
 
@@ -65,6 +58,8 @@ SWFShift(SWFFile, fileByte + 8);
     binOut.yMin = bs.readSigned(nbits);
     binOut.yMax = bs.readSigned(nbits);
 
+    int totalBytes = (5 + 4 * nbits + 7) / 8;
+    SWFShift(SWFFile, (FWSHeaderRect ? 8 : 0) + totalBytes);
 
     return binOut;
 }
