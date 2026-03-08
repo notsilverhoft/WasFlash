@@ -223,6 +223,8 @@ SWFHeader getSWFHeader(std::vector<uint8_t>& SWFFile, char* Filename) {
 
     binOut.SWFFrameCount = getSWFFrameCount(SWFFile);
     std::cout << "Frame Count: " << binOut.SWFFrameCount << "\n";
+    
+    binOut.SWFFile = SWFFile;
 
     return binOut;
 }

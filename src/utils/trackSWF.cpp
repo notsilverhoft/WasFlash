@@ -2,9 +2,9 @@
 #include <cstdint>
 #include <vector>
 
-void SWFShift(std::vector<uint8_t>& SWFFile, int amount) {
+void SWFShift(std::vector<uint8_t>& buffer, int amount) {
 
-    SWFFile.erase(SWFFile.begin(), SWFFile.begin() + amount);
+    buffer.erase(buffer.begin(), buffer.begin() + amount);
 
     return;
 

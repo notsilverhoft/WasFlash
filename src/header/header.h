@@ -20,6 +20,7 @@ struct SWFHeader {
     RECT SWFFrameSize;
     float SWFFrameRate;
     uint16_t SWFFrameCount;
+    std::vector<uint8_t> SWFFile;
 };
 
 int getSWFType(std::vector<uint8_t> SWFFile); 
