@@ -14,6 +14,7 @@ Flash Player was an old plugin for chrome browsers that would allow users to run
   - [x] FrameRate
   - [x] FrameCount
 - [ ] Work on low-level tag parsing
+  - [ ] Parse Tag Headers 
   - [ ] Create a list of tags to work on
 - [ ] Work on higher-level tag parsing
 - [ ] Work on low-level tag interpretation
