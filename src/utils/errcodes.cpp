@@ -61,25 +61,38 @@ void throwErr(int errorCode, char* Filename, int SWFVersion) {
 
         case 51:
             std::cerr << "LZMA Initialization failed with Error: MEM_ERROR!\n";
+            exit(51);
         break;
 
         case 52:
             std::cerr << "LZMA Initialization failed with Error: OPTIONS_ERROR!\n";
+            exit(52);
         break;
 
         case 53:
             std::cerr << "LZMA Decompression failed with Error: DATA_ERROR!\n";
+            exit(53);
         break;
 
         case 54:
             std::cerr << "LZMA Decompression failed with Error: BUF_ERROR!\n";
+            exit(54);
         break;
 
         case 55:
             std::cerr << "LZMA Decompression failed with Error: MEM_ERROR (during decode)!\n";
+            exit(55);
         break;
 
+        case 691: // Tag #69 - Error #1
+            std::cerr << "Error while processing FileAttributes tag: Reserved Area is NOT Empty! Your File is Likely Corrupted! CODE:691\n";
+            exit(691);
+        break;
 
+        case 692: // Tag #69 - Error #2
+            std::cerr << "Error while processing FileAttributes tag: One or more fields used require a newer SWF Version(Current is " << SWFVersion << ")! CODE:692\n";
+            exit(692);
+        break;
     }
 
 }

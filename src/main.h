@@ -22,4 +22,6 @@
             std::istream_iterator<uint8_t>());
 
         return fileStreamOut;
+        
 }
+

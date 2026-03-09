@@ -2,20 +2,29 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <thread>
+#include <mutex>
+#include <deque>
+#include <condition_variable>
+#include <unordered_map>
 #include "tags.h"
+#include "../utils/errcodes.h"
 #include "../utils/trackSWF.h"
+#include "SWFTags/Fileattributes.h"
+#include "../header/header.h"
 
-SWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
+rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
 
-    SWFTag binOut;
+    rawSWFTag binOut;
 
     uint8_t shortOne = SWFFile[0];
     uint8_t shortTwo = SWFFile[1];
     
     uint16_t shortCodeLength = ((shortTwo << 8) | (shortOne));
+    
+    binOut.tagCode = ((shortCodeLength >> 6) & 0x3FF);
 
-    uint16_t tagCode = ((shortCodeLength >> 6) & 0x3FF);
-    binOut.tagCode = tagCode;
+    std::cout << "\nTag Code: " << (int)binOut.tagCode << "\n";
 
     uint8_t shortTagLength = (shortCodeLength & 0x3F);
     binOut.shortTagLength = shortTagLength;
@@ -52,6 +61,8 @@ SWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
         binOut.tagData.insert(binOut.tagData.end(), SWFFile.begin(), SWFFile.begin() + longTagLength);
         
         SWFShift(SWFFile, longTagLength);
+        
+        std::cout << "Tag length:" << longTagLength << "\n";
 
     } else {
 
@@ -59,8 +70,111 @@ SWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
 
         SWFShift(SWFFile, shortTagLength);
 
+        std::cout << "Tag length: " << static_cast<int>(shortTagLength) << "\n";
+
+    }
+
+    std::cout << "Actual Tag length: " << binOut.tagData.size() << "\n";
+
+    return binOut;
+
+}
+
+
+SWFTag parseSWFTag(rawSWFTag rawTag) {
+
+    SWFTag binOut;
+    binOut.tagCode = rawTag.tagCode;
+
+    switch(rawTag.tagCode) {
+
+        case 69: // Tag #69 - FileAttributes
+            binOut = getFileAttributesTag(rawTag);
+            binOut.tagCode = rawTag.tagCode;
+        break;
+
     }
 
     return binOut;
 
 }
+
+void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, SWFHeader header) {
+
+    std::unordered_map<int16_t, SWFTag> processedTags;
+
+    while (true) {
+        std::unique_lock<std::mutex> lock(streamMutex);
+        cv.wait(lock, [&] { return !stream.empty() || done; });
+        
+        if ( stream.empty() && done ) break;
+        
+        SWFTag tag = stream.back();
+        stream.pop_back();
+        lock.unlock();
+        
+        // Process tags
+        switch (tag.tagCode) {
+                
+            case 69: // Tag #69 - FileAttributes
+                // Errors: 
+                    if ( (int)tag.reserved != 0 ) { // Error 691
+
+                        throwErr(691);
+
+                    }
+
+                    if ( header.SWFVersion < 10 && tag.UseDirectBlit ) { // Error 692
+                            
+                        throwErr(692, NULL, header.SWFVersion);
+
+                    }
+
+                    if ( header.SWFVersion < 10 && tag.UseGPU ) { // Error 692
+                            
+                        throwErr(692, NULL, header.SWFVersion);
+
+                    }
+
+                    if ( header.SWFVersion < 9 && tag.ActionScript3 ) { // Error 692
+                            
+                        throwErr(692, NULL, header.SWFVersion);
+
+                    }
+
+                    if ( (int)tag.reserved2 != 0 ) { // Error 691
+
+                        throwErr(691);
+
+                    }
+
+                    if ( (int)tag.reserved3 != 0 ) { // Error 691
+
+                        throwErr(691);
+
+                    }
+
+                    if ( (int)tag.reserved4 != 0 ) { // Error 691
+
+                        throwErr(691);
+
+                    }
+
+                    if ( (int)tag.reserved5 != 0 ) { // Error 691
+
+                        throwErr(691);
+
+                    }
+                
+                // Store
+                    processedTags[(0 - tag.tagCode)] = tag;
+        }
+
+    }
+}
+
+    void pushTag(SWFTag tag, std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv) {
+        std::lock_guard<std::mutex> lock(streamMutex);
+        stream.push_front(tag);
+        cv.notify_one();  // wake up processor
+    }
