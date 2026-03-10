@@ -7,11 +7,13 @@
 #include <deque>
 #include <condition_variable>
 #include <unordered_map>
+#include <atomic>
 #include "tags.h"
+#include "SWFTags/Fileattributes.h"
 #include "../utils/errcodes.h"
 #include "../utils/trackSWF.h"
-#include "SWFTags/Fileattributes.h"
 #include "../header/header.h"
+#include "../rendering/renderer.h"
 
 rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
 
@@ -88,10 +90,20 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
 
     switch(rawTag.tagCode) {
 
+        case 9: //Tag #9 - SetBackgroundColor
+            binOut.red = rawTag.tagData[0];
+            std::cout << "Red: " << (int)binOut.red << "\n";
+            binOut.green = rawTag.tagData[1];
+            std::cout << "Green: " << (int)binOut.green << "\n";
+            binOut.blue = rawTag.tagData[2];
+            std::cout << "Blue: " << (int)binOut.blue << "\n";
+        break;
         case 69: // Tag #69 - FileAttributes
             binOut = getFileAttributesTag(rawTag);
             binOut.tagCode = rawTag.tagCode;
         break;
+
+        
 
     }
 
@@ -99,7 +111,7 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
 
 }
 
-void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, SWFHeader header) {
+void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv, std::atomic<bool>& running, const SWFHeader& header) {
 
     std::unordered_map<int16_t, SWFTag> processedTags;
 
@@ -112,9 +124,19 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
         SWFTag tag = stream.back();
         stream.pop_back();
         lock.unlock();
+        rendererInstruction instruction;
         
         // Process tags
         switch (tag.tagCode) {
+
+            case 9: // Tag #9 - SetBackgroundColor
+
+                instruction.instructionCode = 1;
+                instruction.red = tag.red;
+                instruction.green = tag.green;
+                instruction.blue = tag.blue;
+
+                pushRendererInstruction(instruction, renderStream, renderStreamMutex, renderCv);
                 
             case 69: // Tag #69 - FileAttributes
                 // Errors: 
@@ -168,6 +190,9 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 
                 // Store
                     processedTags[(0 - tag.tagCode)] = tag;
+
+            break;
+                    
         }
 
     }

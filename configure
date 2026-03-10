@@ -5,8 +5,8 @@ echo "Configuring wasflash..."
 # Default compiler
 CXX=${CXX:-g++}
 CXXFLAGS="-std=c++20 -Wall -Wextra -O2 -fsanitize=address"
-INCLUDE_PATHS="-I./include/zlib/include "
-LDFLAGS="-L./include/zlib/lib -lz -llzma"
+INCLUDE_PATHS="-I./include/zlib/include -I ./include/skia/include"
+LDFLAGS="-L./include/zlib/lib -L./include/skia/lib -lz -llzma -lskia -lglfw -lfreetype -lGL -lX11"
 
 # Default install prefix (system)
 PREFIX=${PREFIX:-/usr/local}

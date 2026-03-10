@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include "SWFTags/Fileattributes.h"
 #include "../header/header.h"
+#include "../rendering/renderer.h"
 
 struct rawSWFTag {
     uint16_t tagCode;
@@ -22,6 +23,14 @@ struct rawSWFTag {
 rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile);
 
 // -- Tags -- //
+
+// Tag #9 - SetBackgroundColor
+
+struct SWFSetBackgroundColorTag {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+};
 
 // Tag #69 - FileAttributes
 struct SWFFileAttributesTag { // Only(And all) SWF version 8+
@@ -37,12 +46,12 @@ struct SWFFileAttributesTag { // Only(And all) SWF version 8+
     uint8_t reserved5;
 };
 
-struct SWFTag : SWFFileAttributesTag {
+struct SWFTag : SWFFileAttributesTag, SWFSetBackgroundColorTag {
     uint16_t tagCode;
 };
 
 SWFTag parseSWFTag(rawSWFTag rawTag);
 
-void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, SWFHeader header);
+void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv, std::atomic<bool>& running, const SWFHeader& header);
 
 void pushTag(SWFTag tag, std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv);
