@@ -84,6 +84,21 @@ void throwErr(int errorCode, char* Filename, int SWFVersion) {
             exit(55);
         break;
 
+        case 601: // Tag #60 - Error #1
+            std::cerr << "Error while processing DefineVideoStream tag: Reserved Area is NOT Empty! Your File is Likely Corrupted! CODE:601\n";
+            exit(601);
+        break;
+
+        case 602: // Tag #60 - Error #2
+            std::cerr << "Error while processing DefineVideoStream tag: One or more fields used require a newer SWF Version(Current is " << SWFVersion << ")! CODE:602\n";
+            exit(602);
+        break;
+        
+        case 603: // Tag #60 - Error #3
+            std::cerr << "Error while processing DefineVideoStream tag: Invalid Codec ID! Your File is Likely Corrupted! CODE:603\n";
+            exit(603);
+        break;
+
         case 691: // Tag #69 - Error #1
             std::cerr << "Error while processing FileAttributes tag: Reserved Area is NOT Empty! Your File is Likely Corrupted! CODE:691\n";
             exit(691);

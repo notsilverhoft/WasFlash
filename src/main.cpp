@@ -58,11 +58,17 @@ int main(int argc, char* argv[]) {
 
     
 
-    for(int x = 0; x < 2; x++) {
+    for(int x = 0; x < 10000; x++) {
         
         rawTag = getSWFTag(SWFFile);
         parsedSWFTag = parseSWFTag(rawTag);
         pushTag(parsedSWFTag, stream, streamMutex, cv);
+
+        if (rawTag.tagCode == 0) {
+
+            break;
+
+        }
     }
     
     {

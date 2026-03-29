@@ -1,6 +1,7 @@
 CXX = @CXX@
 CXXFLAGS = @CXXFLAGS@
-LDFLAGS = @LDFLAGS@
+FFMPEG_LIBS = $(shell pkg-config --libs libavformat libavcodec libavutil libswscale libswresample)
+LDFLAGS = @LDFLAGS@ $(FFMPEG_LIBS)
 INCLUDE_PATHS = @INCLUDE_PATHS@
 BUILD_DIR = @BUILD_DIR@
 PREFIX = @PREFIX@
@@ -31,6 +32,7 @@ $(TARGET_PATH): $(OBJ)
 
 install: $(TARGET_PATH)
 	mkdir -p $(PREFIX)/bin
+	mkdir -p $(PREFIX)/lib
 	cp $(TARGET_PATH) $(PREFIX)/bin/$(TARGET)
 
 clean:

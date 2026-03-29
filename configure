@@ -5,7 +5,7 @@ echo "Configuring wasflash..."
 # Default compiler
 CXX=${CXX:-g++}
 CXXFLAGS="-std=c++20 -Wall -Wextra -O2 -fsanitize=address"
-INCLUDE_PATHS="-I./include/zlib/include -I ./include/skia/include"
+INCLUDE_PATHS="-I./include/zlib/include -I ./include/skia/include -I./include/lightspark/include"
 LDFLAGS="-L./include/zlib/lib -L./include/skia/lib -lz -llzma -lskia -lglfw -lfreetype -lGL -lX11"
 
 # Default install prefix (system)

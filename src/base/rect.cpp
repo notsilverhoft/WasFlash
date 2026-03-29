@@ -4,9 +4,10 @@
 #include <cmath>
 #include <cstring>
 #include "rect.h"
+#include "../utils/bitStream.hpp"
 #include "../utils/trackSWF.h"
 
-RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSHeaderRect) {
+RECT getRect(std::vector<uint8_t>& data, bool FWSHeaderRect) {
 
     RECT binOut;
     int fileByte;
@@ -23,21 +24,21 @@ RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSHeaderRect) {
     }
 
 
-    uint64_t buffer1 = static_cast<uint64_t>(SWFFile[fileByte]);
+    uint64_t buffer1 = static_cast<uint64_t>(data[fileByte]);
     
     for (int i = 1; i < 8; i++) {
 
-        buffer1 = ((buffer1 << 8) | (SWFFile[fileByte + i]));
+        buffer1 = ((buffer1 << 8) | (data[fileByte + i]));
 
     }
 
     int secondOffset = fileByte + 8;
 
-    uint64_t buffer2 = static_cast<uint64_t>(SWFFile[secondOffset]);
+    uint64_t buffer2 = static_cast<uint64_t>(data[secondOffset]);
 
     for (int i = 1; i < 8; i++) {
 
-        buffer2 = ((buffer2 << 8) | (SWFFile[secondOffset + i]));
+        buffer2 = ((buffer2 << 8) | (data[secondOffset + i]));
 
     }
 
@@ -52,14 +53,14 @@ RECT getRect(std::vector<uint8_t>& SWFFile, bool FWSHeaderRect) {
 
     BitStream bs(bitstream);
 
-    uint8_t nbits = static_cast<uint8_t> (bs.read(5));
+    uint8_t nbits = static_cast<uint8_t> (bs.readUnsigned(5));
     binOut.xMin = bs.readSigned(nbits);
     binOut.xMax = bs.readSigned(nbits);
     binOut.yMin = bs.readSigned(nbits);
     binOut.yMax = bs.readSigned(nbits);
 
     int totalBytes = (5 + 4 * nbits + 7) / 8;
-    SWFShift(SWFFile, (FWSHeaderRect ? 8 : 0) + totalBytes);
+    SWFShift(data, (FWSHeaderRect ? 8 : 0) + totalBytes);
 
     return binOut;
 }

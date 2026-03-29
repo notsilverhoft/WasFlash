@@ -8,15 +8,15 @@
 #ifndef SkYUVAPixmaps_DEFINED
 #define SkYUVAPixmaps_DEFINED
 
-#include "include/core/SkColorType.h"
-#include "include/core/SkData.h"
-#include "include/core/SkImageInfo.h"
-#include "include/core/SkPixmap.h"
-#include "include/core/SkRefCnt.h"
-#include "include/core/SkSize.h"
-#include "include/core/SkTypes.h"
-#include "include/core/SkYUVAInfo.h"
-#include "include/private/base/SkTo.h"
+#include "SkColorType.h"
+#include "SkData.h"
+#include "SkImageInfo.h"
+#include "SkPixmap.h"
+#include "SkRefCnt.h"
+#include "SkSize.h"
+#include "SkTypes.h"
+#include "SkYUVAInfo.h"
+#include "../private/base/SkTo.h"
 
 #include <array>
 #include <bitset>

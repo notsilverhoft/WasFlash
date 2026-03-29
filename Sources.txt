@@ -13,3 +13,5 @@ https://github.com/jljusten/LZMA-SDK/blob/master/DOC/lzma-specification.txt
 http://hackipedia.org/browse.cgi/File%20formats/SWF%2c%20Macromedia%e2%88%95Adobe%20Flash/SWF%20File%20Format%20Specification%20Version%208%20by%20Macromedia%20%282005%29.pdf
 
 https://www.loc.gov/preservation/digital/formats/fdd/fdd000248.shtml
+
+https://burgerlib.readthedocs.io/en/latest/avm2overview.pdf
