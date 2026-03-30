@@ -1,7 +1,6 @@
 CXX = @CXX@
 CXXFLAGS = @CXXFLAGS@
-FFMPEG_LIBS = $(shell pkg-config --libs libavformat libavcodec libavutil libswscale libswresample)
-LDFLAGS = @LDFLAGS@ $(FFMPEG_LIBS)
+LDFLAGS = @LDFLAGS@
 INCLUDE_PATHS = @INCLUDE_PATHS@
 BUILD_DIR = @BUILD_DIR@
 PREFIX = @PREFIX@
