@@ -4,6 +4,7 @@ LDFLAGS = @LDFLAGS@
 INCLUDE_PATHS = @INCLUDE_PATHS@
 BUILD_DIR = @BUILD_DIR@
 PREFIX = @PREFIX@
+IS_EMSCRIPTEN = @IS_EMSCRIPTEN@
 
 # Find all .cpp files recursively
 SRC = $(shell find src -name '*.cpp')
@@ -11,7 +12,12 @@ SRC = $(shell find src -name '*.cpp')
 # Object files in build/ with same folder structure
 OBJ = $(patsubst src/%,$(BUILD_DIR)/%,$(SRC:.cpp=.o))
 
+ifeq ($(IS_EMSCRIPTEN),1)
+TARGET = wasflash.js
+else
 TARGET = wasflash
+endif
+
 TARGET_PATH = $(BUILD_DIR)/$(TARGET)
 
 all: $(TARGET_PATH)

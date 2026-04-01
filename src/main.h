@@ -8,7 +8,7 @@
 
     std::vector<uint8_t> readFile(const char* filePath) {
 
-        std::ifstream rawFile(filePath);
+        std::ifstream rawFile(filePath, std::ios::binary);
         rawFile.unsetf(std::ios::skipws);
         std::streampos fileSize;
         rawFile.seekg(0, std::ios::end);

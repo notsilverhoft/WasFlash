@@ -7,6 +7,7 @@ if [ -f /etc/os-release ]; then
     
     if [ "$ID" = "debian" ] || [[ "$ID_LIKE" =~ "debian" ]]; then
         sudo apt update && sudo apt install -y nasm libglfw3-dev ninja-build gcc make autoconf automake libtool libglu1-mesa-dev
+        export debian = true
     fi
 else
     echo "/etc/os-release not found, falling back to other methods..."
@@ -29,14 +30,15 @@ fi
 
     ### -- LZMA -- ###
 
-        git clone /home/silverhoft/Documents/Projects/Flash For Wasm/swfParse
+        git clone https://github.com/kobolabs/liblzma
 
     ### -- End -- ###
     
 ### --- End --- ###
 
-### --- Building Repos --- ###
 
+### --- Building Repos --- ###
+    if [debian]; then
     ### -- Linux -- ###
 
         ### - FFmpeg - ###
@@ -49,43 +51,68 @@ fi
             mkdir -p $PWD/../include/FFmpeg/lib
             cp $PWD/build/include/* -r $PWD/../include/FFmpeg/include/
             cp $PWD/build/lib/* -r $PWD/../include/FFmpeg/lib
+            cd ../
 
         ### - Skia - ###
 
             cd skia
             python3 tools/git-sync-deps
             python3 bin/fetch-ninja
-            bin/gn gen out/build --args="
-            is_debug = false
-            is_official_build = true
-
-            skia_use_gl = true
-            skia_enable_ganesh = true
-
-            # Disable everything you don't need
-            skia_enable_skottie = false
-            skia_enable_skparagraph = false
-            skia_enable_svg = false
-            skia_enable_skshaper = false
-            skia_use_icu = false
-            skia_use_harfbuzz = false
-            skia_use_expat = false
-            skia_use_libjpeg_turbo_decode = false
-            skia_use_libjpeg_turbo_encode = false
-            skia_use_libwebp_decode = false
-            skia_use_libwebp_encode = false
-            skia_use_zlib = false
-            skia_use_wuffs = false
-            skia_enable_pdf = false
-            skia_use_freetype = false
-            skia_use_fontconfig = false
-            "
-            ninja -C out/build
+            mkdir -p $PWD/out/build
+            cp $PWD/../EMScriptenArgs.gn $PWD/out/build/args.gn
+            bin/gn gen out/build
+            ninja -C out/build skia
             mkdir -p $PWD/../include/skia/lib
             cp $PWD/out/build/* -r $PWD/../include/skia/lib
+            cd ../
 
         ### - End - ###
+    fi
 
+    ### -- Emscripten -- ##
+
+        git clone https://github.com/emscripten-core/emsdk
+        cd emsdk
+        ./emsdk install latest
+        ./emsdk activate latest
+        source emsdk_env.sh
+        embuilder build zlib
+        cd ../
+
+        ### - FFmpeg - ###
+
+            cd FFmpeg
+            emconfigure ./configure --disable-asm --disable-x86asm --cc=emcc --cxx=em++ --ar=emar --enable-cross-compile --target-os=none --arch=x86_32 --disable-programs --disable-doc --disable-network --nm=emnm --ranlib=emranlib --prefix=$PWD/build
+            emmake make
+            make install
+            mkdir -p $PWD/../include/FFmpeg/include/
+            mkdir -p $PWD/../include/FFmpeg/lib
+            cp $PWD/build/include/* -r $PWD/../include/FFmpeg/include/
+            cp $PWD/build/lib/* -r $PWD/../include/FFmpeg/lib
+            cd ../
+
+        ### - Skia - ###
+
+            cd skia
+            python3 tools/git-sync-deps
+            python3 bin/fetch-ninja
+            mkdir -p $PWD/out/build
+            cp $PWD/../EMScriptenArgs.gn $PWD/out/build/args.gn
+            bin/gn gen out/build
+            ninja -C out/build skia
+            mkdir -p $PWD/../include/skia/lib
+            cp $PWD/out/build/* -r $PWD/../include/skia/lib
+            cd ../
+            
+        ### LZMA
+            cd liblzma
+            emconfigure ./configure --disable-shared --enable-static --disable-xz --disable-xzdec --disable-lzmadec --disable-lzmainfo --disable-scripts --host=wasm32-unknown-linux --prefix=$PWD/build
+            emmake make
+            make install
+            mkdir -p $PWD/../include/liblzma/include/
+            mkdir -p $PWD/../include/liblzma/lib
+            cp $PWD/build/include/* -r $PWD/../include/liblzma/include/
+            cp $PWD/build/lib/* -r $PWD/../include/liblzma/lib
 
 ### --- End --- ###
             

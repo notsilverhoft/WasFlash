@@ -173,6 +173,7 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
     std::unordered_map<int16_t, SWFTag> processedTags;
     std::unordered_map<uint16_t, SWFCharacter> savedCharacters;
     std::deque<rendererInstruction> queuedRenderingInstructions;
+    auto nextFrame = std::chrono::steady_clock::now();
 
     while (true) {
         std::unique_lock<std::mutex> lock(streamMutex);
@@ -188,15 +189,20 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
         switch (tag.tagCode) {
 
             case 1: // Tag #1 - ShowFrame
+            {
 
                 while (!queuedRenderingInstructions.empty()) {
                     pushRendererInstruction(queuedRenderingInstructions.back(), renderStream, renderStreamMutex, renderCv);
                     queuedRenderingInstructions.pop_back();
-                    
                 }
-                std::this_thread::sleep_for(std::chrono::duration<float, std::milli>(1000.0f / header.SWFFrameRate));
 
-            break;
+                nextFrame += std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float, std::milli>(1000.0f / header.SWFFrameRate)
+                );;
+                std::this_thread::sleep_until(nextFrame);
+                
+            }
+break;
 
             case 9: // Tag #9 - SetBackgroundColor
 

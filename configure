@@ -5,8 +5,31 @@ echo "Configuring wasflash..."
 # Default compiler
 CXX=${CXX:-g++}
 CXXFLAGS="-std=c++20 -Wall -Wextra -O2"
-INCLUDE_PATHS="-I./include/FFmpeg/include -I./include/zlib/include -I ./include/skia/include"
-LDFLAGS="-L./include/FFmpeg/lib -L./include/zlib/lib -L./include/skia/lib -Wl,--start-group -lavformat -lavcodec -lavutil -lswscale -lswresample -Wl,--end-group -lz -llzma -lskia -lglfw -lfreetype -lGL -lX11 -ldl -lpthread"
+INCLUDE_PATHS="-I./include/FFmpeg/include -I./include/zlib/include -I ./include/skia/include -I ./include/liblzma/include"
+
+# Detect Emscripten
+if ${CXX} -dM -E - < /dev/null 2>/dev/null | grep -q __EMSCRIPTEN__; then
+    echo "Emscripten detected, configuring for WebAssembly..."
+    IS_EMSCRIPTEN=1
+    CXXFLAGS="-std=c++20 -Wall -Wextra -O2 -pthread"
+    LDFLAGS="-L./include/FFmpeg/lib -L./include/zlib/lib -L./include/skia/lib -L./include/liblzma/lib \
+-Wl,--start-group -lavformat -lavcodec -lavutil -lswscale -lswresample -Wl,--end-group \
+-lz -llzma -lskia \
+-sUSE_WEBGL2=1 -sFULL_ES3=1 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4294967296 \
+-sEXPORTED_FUNCTIONS='[\"_main\"]' \
+-sEXPORT_NAME='WasFlash' \
+-sMODULARIZE=1 -sEXIT_RUNTIME=0 \
+-sPTHREAD_POOL_SIZE=4 \
+-sEXPORTED_RUNTIME_METHODS='[\"FS\",\"callMain\"]' \
+-sFORCE_FILESYSTEM=1 -sWASM=1 \
+-sINVOKE_RUN=0 -sALLOW_BLOCKING_ON_MAIN_THREAD=0 -sPROXY_TO_PTHREAD=1"
+else
+    echo "Native build detected..."
+    IS_EMSCRIPTEN=0
+    LDFLAGS="-L./include/FFmpeg/lib -L./include/zlib/lib -L./include/skia/lib -L./include/liblzma/lib \
+-Wl,--start-group -lavformat -lavcodec -lavutil -lswscale -lswresample -Wl,--end-group \
+-lz -llzma -lskia -lglfw -lfreetype -lGL -lX11 -ldl -lpthread "
+fi
 
 # Default install prefix (system)
 PREFIX=${PREFIX:-/usr/local}
@@ -21,6 +44,7 @@ sed \
     -e "s|@LDFLAGS@|$LDFLAGS|g" \
     -e "s|@PREFIX@|$PREFIX|g" \
     -e "s|@BUILD_DIR@|$BUILD_DIR|g" \
+    -e "s|@IS_EMSCRIPTEN@|$IS_EMSCRIPTEN|g" \
     Makefile.in > Makefile
 
 echo "Configuration complete."

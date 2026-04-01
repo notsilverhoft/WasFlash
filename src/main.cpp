@@ -12,7 +12,15 @@
 #include "rendering/renderer.h"
 #include "main.h"
 
+
 int main(int argc, char* argv[]) {
+
+    std::cout << "Started";
+    std::cerr << "argc: " << argc << "\n";
+    if (argc < 2) {
+        std::cerr << "No file argument provided\n";
+        return 1;
+    }
 
     std::cout << argv[1] << "\n";
     std::vector<uint8_t> inputFile = readFile(argv[1]);

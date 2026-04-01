@@ -210,7 +210,7 @@ std::vector<namespaceInfo> getNamespaces(uint32_t namespaceCount, rawSWFTag& raw
 
         binOut[i + 1].name = getVariableUint30(rawTag);
 
-        std::cout << "DoABC: ABC File: Constant Pool: Namespace: #" << i + 1 << ": Kind: 0x" << std::hex << std::setfill('0') << std::uppercase << static_cast<uint>(binOut[i + 1].kind) << "\n";
+        std::cout << "DoABC: ABC File: Constant Pool: Namespace: #" << i + 1 << ": Kind: 0x" << std::hex << std::setfill('0') << std::uppercase << static_cast<uint32_t>(binOut[i + 1].kind) << "\n";
         std::cout << "DoABC: ABC File: Constant Pool: Namespace: #" << i + 1 << ": Name: " << (uint32_t)binOut[i + 1].name << "\n";
 
     }

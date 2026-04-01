@@ -13,8 +13,6 @@
 /include/skia/include/BUILD.bazel
 /include/skia/include/OWNERS
 /include/skia/include/android
-/include/skia/include/codec
-/include/skia/include/config
 /include/skia/include/docs
 /include/skia/include/effects
 /include/skia/include/encode
