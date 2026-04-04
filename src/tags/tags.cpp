@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <unordered_map>
 #include <atomic>
+#include <chrono>
 #include "tags.h"
 #include "SWFTags/Fileattributes.h"
 #include "SWFTags/DefineVideoStream.h"
@@ -198,11 +199,11 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
                 nextFrame += std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                     std::chrono::duration<float, std::milli>(1000.0f / header.SWFFrameRate)
-                );;
+                );
                 std::this_thread::sleep_until(nextFrame);
                 
             }
-break;
+            break;
 
             case 9: // Tag #9 - SetBackgroundColor
 
@@ -276,33 +277,35 @@ break;
 
             break;
                     
-            case 61: //Tag 61 - VideoFrame
+            case 61: // Tag 61 - VideoFrame
+            {
+                auto frameStart = std::chrono::steady_clock::now();
 
                 if (processedTags.find(tag.VideoFrame.StreamID) == processedTags.end() || savedCharacters.find(tag.VideoFrame.StreamID) == savedCharacters.end()) {
                     break;
                 }
 
-                {
-                    YUVFrame decodedFrame = decodeFrame(tag.VideoFrame.VideoData);
-                    if (!decodedFrame.yPlane || !decodedFrame.uPlane || !decodedFrame.vPlane) {
-                        break;
-                    }
-
-                    queuedRenderingInstructions.push_front(getVideoInstruction(
-                        decodedFrame.width,
-                        decodedFrame.height,
-                        savedCharacters[tag.VideoFrame.StreamID].xPos / 20,
-                        savedCharacters[tag.VideoFrame.StreamID].yPos / 20,
-                        processedTags[tag.VideoFrame.StreamID].DefineVideoStream.videoFlagsSmoothing,
-                        decodedFrame.yPlane,
-                        decodedFrame.uPlane,
-                        decodedFrame.vPlane,
-                        decodedFrame.yStride,
-                        decodedFrame.uStride,
-                        decodedFrame.vStride
-                    ));
+                YUVFrame decodedFrame = decodeFrame(tag.VideoFrame.VideoData);
+                if (!decodedFrame.yPlane || !decodedFrame.uPlane || !decodedFrame.vPlane) {
+                    break;
                 }
-            
+
+                queuedRenderingInstructions.push_front(getVideoInstruction(
+                    decodedFrame.width,
+                    decodedFrame.height,
+                    savedCharacters[tag.VideoFrame.StreamID].xPos / 20,
+                    savedCharacters[tag.VideoFrame.StreamID].yPos / 20,
+                    processedTags[tag.VideoFrame.StreamID].DefineVideoStream.videoFlagsSmoothing,
+                    decodedFrame.yPlane,
+                    decodedFrame.uPlane,
+                    decodedFrame.vPlane,
+                    decodedFrame.yStride,
+                    decodedFrame.uStride,
+                    decodedFrame.vStride
+                ));
+
+                std::cerr << "Total frame time: " << std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - frameStart).count() << "ms\n";
+            }
             break;
 
             case 69: // Tag #69 - FileAttributes

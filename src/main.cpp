@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
 
     
 
-    for(int x = 0; x < 10000; x++) {
+    while (true) {
         
         rawTag = getSWFTag(SWFFile);
         parsedSWFTag = parseSWFTag(rawTag);

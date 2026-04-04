@@ -44,7 +44,7 @@ fi
         ### - FFmpeg - ###
 
             cd FFmpeg
-            ./configure --prefix=$PWD/build
+            ./configure --prefix=$PWD/build --disable-shared --enable-static --enable-optimizations --extra-cflags="-march=native -O3" --extra-cxxflags="-march=native -O3" --disable-programs --disable-doc --disable-network
             make
             make install
             mkdir -p $PWD/../include/FFmpeg/include/

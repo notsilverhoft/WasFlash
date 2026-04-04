@@ -122,6 +122,8 @@ YUVFrame decodeFrame(const std::vector<uint8_t>& data) {
     pkt->data = (uint8_t*)data.data();
     pkt->size = static_cast<int>(data.size());
 
+    auto decodeStart = std::chrono::steady_clock::now();
+
     int ret = avcodec_send_packet(codec_ctx, pkt);
     if (ret < 0) return {};
 
@@ -133,6 +135,9 @@ YUVFrame decodeFrame(const std::vector<uint8_t>& data) {
     }
     if (ret < 0) return {};
     if (frame->width <= 0 || frame->height <= 0) return {};
+
+    auto decodeEnd = std::chrono::steady_clock::now();
+    std::cerr << "Decode time: " << std::chrono::duration<float, std::milli>(decodeEnd - decodeStart).count() << "ms\n";
 
     int ySize = frame->linesize[0] * frame->height;
     int uSize = frame->linesize[1] * (frame->height / 2);
