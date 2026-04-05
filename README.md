@@ -22,7 +22,7 @@ A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), d
 - [ ] Work on making an ActionScript instruction engine
 - [ ] Community testing
 
-
+Please feel free to use the included swf files in samples if you do not have any!
 
 ## License
 
