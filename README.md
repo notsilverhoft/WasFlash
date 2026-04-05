@@ -1,4 +1,4 @@
-# WaFlash 
+# WasFlash 
 
 Currently:
 An SWF Movie Player that plays typical SWF video like files, without audio. It works for both Linux, and HTML5.
