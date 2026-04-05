@@ -1,11 +1,11 @@
-# WaFlash ⚡
+# WaFlash 
 
-A (Hopefully) Fully Featured Flash Player Replacement, designed for both PC and Web (Using Emscripten :D). This will process .SWF files and display their contents, much like current SWF players like Ruffle and LightSpark, but with a higher focus on portability, and simple integration with websites.
+Currently:
+An SWF Movie Player that plays typical SWF video like files, without audio. It works for both Linux, and HTML5.
 
----
+The Hope:
 
-## What is Flash Player?
-Flash Player was an old plugin for chrome browsers that would allow users to run SWF files directly off of websites. This was used for games, videos, and even physics simulations. Some of my favorite examples, were the Papa's Games. In fact, Papa's Scooperia is my entire motivation to create this, as I used to play it as a kid. The point is, people loved the games that came out of Flash, and when Adobe discontinued the plugin, many of us were devistated.
+A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), designed for both PC and Web(Using EMScripten :D). In essence, this would be able to run flash games in the modern day. This will process .SWF files and display their contents, much like current SWF players like Ruffle and LightSpark, but with a higher focus on portability, and simple integration with websites.
 
 ## Goals & Progress
 
