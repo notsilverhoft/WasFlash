@@ -30,4 +30,4 @@ TBD
 
 ---
 
-*WaFlash is not affiliated with Adobe Inc. Flash and SWF are trademarks of Adobe.*
+*WasFlash is not affiliated with Adobe Inc. Flash and SWF are trademarks of Adobe.*
