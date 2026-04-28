@@ -7,11 +7,15 @@ The Hope:
 
 A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), designed for both PC and Web(Using EMScripten :D). In essence, this would be able to run flash games in the modern day. This will process .SWF files and display their contents, much like current SWF players like Ruffle and LightSpark, but with a higher focus on portability, and simple integration with websites.  
 
+## Optimization Quest:
+
 I had to optimize this using a tone of methods:
 
 I Reduced memory usage by slimming down my shape processor(This is listed in devlogs)
 
 Many of my algorithms throughout use Efficient algorithms, I did this by creating base functions for every data shift, so I don't have to read through a roll of bits. I created efficient ways to read out bytes, and complete bit-math(See my utils in src).
+
+I used inbuilt EMScripten dependencies, and used MiniAudio, rather than SDL, and I am only using what I need in skia.
 
 ## Goals & Progress
 
