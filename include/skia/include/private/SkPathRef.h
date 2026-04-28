@@ -8,20 +8,20 @@
 #ifndef SkPathRef_DEFINED
 #define SkPathRef_DEFINED
 
-#include "include/core/SkArc.h"
-#include "include/core/SkMatrix.h"
-#include "include/core/SkPathTypes.h" // IWYU pragma: keep
-#include "include/core/SkPoint.h"
-#include "include/core/SkRRect.h"
-#include "include/core/SkRect.h"
-#include "include/core/SkRefCnt.h"
-#include "include/core/SkScalar.h"
-#include "include/core/SkTypes.h"
-#include "include/private/SkIDChangeListener.h"
-#include "include/private/base/SkDebug.h"
-#include "include/private/base/SkSpan_impl.h"
-#include "include/private/base/SkTArray.h"
-#include "include/private/base/SkTo.h"
+#include "../core/SkArc.h"
+#include "../core/SkMatrix.h"
+#include "../core/SkPathTypes.h" // IWYU pragma: keep
+#include "../core/SkPoint.h"
+#include "../core/SkRRect.h"
+#include "../core/SkRect.h"
+#include "../core/SkRefCnt.h"
+#include "../core/SkScalar.h"
+#include "../core/SkTypes.h"
+#include "SkIDChangeListener.h"
+#include "base/SkDebug.h"
+#include "base/SkSpan_impl.h"
+#include "base/SkTArray.h"
+#include "base/SkTo.h"
 
 #include <atomic>
 #include <cstddef>

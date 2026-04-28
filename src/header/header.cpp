@@ -145,7 +145,7 @@ void errorChecker(int type, char* Filename, int SWFType, int SWFVersion) {
         if ( type == 2 ) {
 
             // Error Code 21 - Bad Version
-                if ( SWFVersion > 19 | SWFVersion < 1 ) {
+                if ( SWFVersion < 1 ) {
 
                     throwErr(21, Filename);
 

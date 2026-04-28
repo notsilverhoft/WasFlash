@@ -8,18 +8,18 @@
 #ifndef SkPathBuilder_DEFINED
 #define SkPathBuilder_DEFINED
 
-#include "include/core/SkMatrix.h"
-#include "include/core/SkPath.h"
-#include "include/core/SkPathIter.h"
-#include "include/core/SkPathTypes.h"
-#include "include/core/SkPoint.h"
-#include "include/core/SkRect.h"
-#include "include/core/SkRefCnt.h"
-#include "include/core/SkScalar.h"
-#include "include/core/SkSpan.h"
-#include "include/core/SkTypes.h"
-#include "include/private/SkPathRef.h"
-#include "include/private/base/SkTArray.h"
+#include "SkMatrix.h"
+#include "SkPath.h"
+#include "SkPathIter.h"
+#include "SkPathTypes.h"
+#include "SkPoint.h"
+#include "SkRect.h"
+#include "SkRefCnt.h"
+#include "SkScalar.h"
+#include "SkSpan.h"
+#include "SkTypes.h"
+#include "../private/SkPathRef.h"
+#include "../private/base/SkTArray.h"
 
 #include <cstdint>
 #include <optional>

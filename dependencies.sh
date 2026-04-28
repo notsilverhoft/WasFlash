@@ -16,6 +16,7 @@ fi
 
 ### --- Pulling Repos --- ###
 
+
     ### -- FFMPEG -- ### 
 
         git clone https://github.com/FFmpeg/FFmpeg
@@ -32,12 +33,22 @@ fi
 
         git clone https://github.com/kobolabs/liblzma
 
+    ### -- MiniAudio -- ###
+
+        wget https://raw.githubusercontent.com/mackron/miniaudio/refs/heads/master/miniaudio.h
+
     ### -- End -- ###
     
 ### --- End --- ###
 
 
 ### --- Building Repos --- ###
+
+    ### -- All -- ###
+
+        mkdir -p $PWD/include/MiniAudio/
+        mv miniaudio.h include/MiniAudio/miniaudio.h
+
     if [debian]; then
     ### -- Linux -- ###
 
@@ -45,7 +56,7 @@ fi
 
             cd FFmpeg
             ./configure --prefix=$PWD/build --disable-shared --enable-static --enable-optimizations --extra-cflags="-march=native -O3" --extra-cxxflags="-march=native -O3" --disable-programs --disable-doc --disable-network
-            make
+            make -j($nproc)
             make install
             mkdir -p $PWD/../include/FFmpeg/include/
             mkdir -p $PWD/../include/FFmpeg/lib
@@ -59,7 +70,7 @@ fi
             python3 tools/git-sync-deps
             python3 bin/fetch-ninja
             mkdir -p $PWD/out/build
-            cp $PWD/../EMScriptenArgs.gn $PWD/out/build/args.gn
+            cp $PWD/../EMScriptenArgs.gn $PWD/out/build/ars.gn
             bin/gn gen out/build
             ninja -C out/build skia
             mkdir -p $PWD/../include/skia/lib
@@ -83,7 +94,7 @@ fi
 
             cd FFmpeg
             emconfigure ./configure --disable-asm --disable-x86asm --cc=emcc --cxx=em++ --ar=emar --enable-cross-compile --target-os=none --arch=x86_32 --disable-programs --disable-doc --disable-network --nm=emnm --ranlib=emranlib --prefix=$PWD/build
-            emmake make
+            emmake make -j$(nproc)
             make install
             mkdir -p $PWD/../include/FFmpeg/include/
             mkdir -p $PWD/../include/FFmpeg/lib
@@ -99,7 +110,7 @@ fi
             mkdir -p $PWD/out/build
             cp $PWD/../EMScriptenArgs.gn $PWD/out/build/args.gn
             bin/gn gen out/build
-            ninja -C out/build skia
+            ninja -C out/build skia -j$(nproc)
             mkdir -p $PWD/../include/skia/lib
             cp $PWD/out/build/* -r $PWD/../include/skia/lib
             cd ../
@@ -107,12 +118,13 @@ fi
         ### LZMA
             cd liblzma
             emconfigure ./configure --disable-shared --enable-static --disable-xz --disable-xzdec --disable-lzmadec --disable-lzmainfo --disable-scripts --host=wasm32-unknown-linux --prefix=$PWD/build
-            emmake make
+            emmake make -j$(nproc)
             make install
             mkdir -p $PWD/../include/liblzma/include/
             mkdir -p $PWD/../include/liblzma/lib
             cp $PWD/build/include/* -r $PWD/../include/liblzma/include/
-            cp $PWD/build/lib/* -r $PWD/../include/liblzma/lib
+            cp $PWD/build/lib/* -r $PWD/../include/liblzma/lib'
+            cd ../
 
 ### --- End --- ###
             

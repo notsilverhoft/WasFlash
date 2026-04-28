@@ -8,11 +8,11 @@
 #ifndef SkShader_DEFINED
 #define SkShader_DEFINED
 
-#include "include/core/SkColor.h"
-#include "include/core/SkColorSpace.h"
-#include "include/core/SkFlattenable.h"
-#include "include/core/SkRefCnt.h"
-#include "include/private/base/SkAPI.h"
+#include "SkColor.h"
+#include "SkColorSpace.h"
+#include "SkFlattenable.h"
+#include "SkRefCnt.h"
+#include "../private/base/SkAPI.h"
 
 class SkBlender;
 class SkColorFilter;

@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include "renderer.h"
 #include "../base/rect.h"
+#include "../base/shapeRecord.h"
 #define SK_GANESH
 #define SK_GL
 #include "../../include/skia/include/gpu/ganesh/GrBackendSurface.h"
@@ -20,11 +21,13 @@
 #include "../../include/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "../../include/skia/include/gpu/ganesh/SkImageGanesh.h"
 #include "../../include/skia/include/core/SkCanvas.h"
+#include "../../include/skia/include/core/SkPathBuilder.h"
 #include "../../include/skia/include/core/SkSurface.h"
 #include "../../include/skia/include/core/SkColorSpace.h"
 #include "../../include/skia/include/core/SkYUVAPixmaps.h"
 #include "../../include/skia/include/core/SkYUVAInfo.h"
 #include "../../include/skia/include/gpu/ganesh/SkImageGanesh.h"
+#include "../../include/skia/include/core/SkColorFilter.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
@@ -41,6 +44,7 @@ struct RenderState {
     sk_sp<GrDirectContext> context;
     SkCanvas* canvas;
     sk_sp<SkSurface> surface;
+    std::deque<rendererInstruction> lastBatch;
 #ifndef __EMSCRIPTEN__
     GLFWwindow* window;
 #endif
@@ -51,60 +55,82 @@ static RenderState gRenderState;
 static void renderFrame() {
     auto& rs = gRenderState;
 
-    // Never block in the main loop callback — just check and return if empty
     std::unique_lock<std::mutex> renderLock(*rs.renderStreamMutex);
     if (rs.renderStream->empty()) return;
 
-    rendererInstruction instruction = rs.renderStream->back();
-    rs.renderStream->pop_back();
-    renderLock.unlock();
+    while (!rs.renderStream->empty()) {
 
-    switch (instruction.instructionCode) {
-        case 0:
-        case 1:
-            rs.canvas->clear(SkColorSetRGB(instruction.red, instruction.green, instruction.blue));
+        rendererInstruction instruction = rs.renderStream->back();
+        rs.renderStream->pop_back();
+        renderLock.unlock();
+
+        switch (instruction.instructionCode) {
+            case 0:
+            break; // uninitialized instruction, ignore
+            case 1:
+                rs.canvas->clear(SkColorSetRGB(instruction.red, instruction.green, instruction.blue));
+                rs.canvas->clipRect(SkRect::MakeWH(
+                    (float)rs.surface->width(),
+                    (float)rs.surface->height()
+                ));
+                
             break;
 
-        case 2: {
-            if (!instruction.yPlane || !instruction.uPlane || !instruction.vPlane) break;
+            case 2: {
+                if (!instruction.yPlane || !instruction.uPlane || !instruction.vPlane) break;
 
-            SkYUVAInfo yuvaInfo(
-                {instruction.videoFrameWidth, instruction.videoFrameHeight},
-                SkYUVAInfo::PlaneConfig::kY_U_V,
-                SkYUVAInfo::Subsampling::k420,
-                kRec601_Limited_SkYUVColorSpace
-            );
+                SkYUVAInfo yuvaInfo(
+                    {instruction.videoFrameWidth, instruction.videoFrameHeight},
+                    SkYUVAInfo::PlaneConfig::kY_U_V,
+                    SkYUVAInfo::Subsampling::k420,
+                    kRec601_Limited_SkYUVColorSpace
+                );
 
-            SkPixmap yPm(SkImageInfo::MakeA8(instruction.videoFrameWidth, instruction.videoFrameHeight),
-                         instruction.yPlane->data(), instruction.yStride);
-            SkPixmap uPm(SkImageInfo::MakeA8(instruction.videoFrameWidth / 2, instruction.videoFrameHeight / 2),
-                         instruction.uPlane->data(), instruction.uStride);
-            SkPixmap vPm(SkImageInfo::MakeA8(instruction.videoFrameWidth / 2, instruction.videoFrameHeight / 2),
-                         instruction.vPlane->data(), instruction.vStride);
-            SkPixmap planes[SkYUVAPixmaps::kMaxPlanes] = {yPm, uPm, vPm};
-            SkYUVAPixmaps yuvaPixmaps = SkYUVAPixmaps::FromExternalPixmaps(yuvaInfo, planes);
-            if (!yuvaPixmaps.isValid()) break;
+                SkPixmap yPm(SkImageInfo::MakeA8(instruction.videoFrameWidth, instruction.videoFrameHeight),
+                             instruction.yPlane->data(), instruction.yStride);
+                SkPixmap uPm(SkImageInfo::MakeA8(instruction.videoFrameWidth / 2, instruction.videoFrameHeight / 2),
+                             instruction.uPlane->data(), instruction.uStride);
+                SkPixmap vPm(SkImageInfo::MakeA8(instruction.videoFrameWidth / 2, instruction.videoFrameHeight / 2),
+                             instruction.vPlane->data(), instruction.vStride);
+                SkPixmap planes[SkYUVAPixmaps::kMaxPlanes] = {yPm, uPm, vPm};
+                SkYUVAPixmaps yuvaPixmaps = SkYUVAPixmaps::FromExternalPixmaps(yuvaInfo, planes);
+                if (!yuvaPixmaps.isValid()) break;
 
-            sk_sp<SkImage> image = SkImages::TextureFromYUVAPixmaps(
-                rs.context.get(), yuvaPixmaps,
-                skgpu::Mipmapped::kNo,
-                false, nullptr
-            );
-            if (!image) break;
+                sk_sp<SkImage> image = SkImages::TextureFromYUVAPixmaps(
+                    rs.context.get(), yuvaPixmaps,
+                    skgpu::Mipmapped::kNo,
+                    false, nullptr
+                );
+                if (!image) break;
 
-            SkSamplingOptions sampling = instruction.useSmoothing
-                ? SkSamplingOptions(SkFilterMode::kLinear)
-                : SkSamplingOptions(SkFilterMode::kNearest);
+                SkSamplingOptions sampling = instruction.useSmoothing
+                    ? SkSamplingOptions(SkFilterMode::kLinear)
+                    : SkSamplingOptions(SkFilterMode::kNearest);
 
-            rs.canvas->drawImageRect(
-                image,
-                SkRect::MakeXYWH(instruction.x, instruction.y,
-                                 instruction.videoFrameWidth, instruction.videoFrameHeight),
-                sampling
-            );
+                rs.canvas->drawImageRect(
+                    image,
+                    SkRect::MakeXYWH(instruction.x, instruction.y,
+                                     instruction.videoFrameWidth, instruction.videoFrameHeight),
+                    sampling
+                );
+            }
+            break;
+
+            case 3:
+                if (!instruction.SWFShape) break;
+                for (int i = 0; i < (int)instruction.SWFShape->FillPaths.size(); i++) {
+                    rs.canvas->drawPath(instruction.SWFShape->FillPaths[i], instruction.SWFShape->Fills[i]);
+                }
+                for (int i = 0; i < (int)instruction.SWFShape->LinePaths.size(); i++) {
+                    rs.canvas->drawPath(instruction.SWFShape->LinePaths[i], instruction.SWFShape->Lines[i]);
+                }
             break;
         }
+
+        renderLock.lock();
     }
+
+    renderLock.unlock();
 
     rs.context->flush();
 
@@ -114,13 +140,11 @@ static void renderFrame() {
 }
 
 #ifdef __EMSCRIPTEN__
-// This runs on the main browser thread via emscripten_sync_run_in_main_runtime_thread
 static void initWebGL(void* arg) {
     int* dims = (int*)arg;
     int width = dims[0];
     int height = dims[1];
 
-    // Resize canvas to match SWF frame size
     emscripten_set_canvas_element_size("#canvas", width, height);
 
     EmscriptenWebGLContextAttributes attrs;
@@ -129,7 +153,7 @@ static void initWebGL(void* arg) {
     attrs.minorVersion = 0;
     attrs.stencil = 1;
     attrs.antialias = 0;
-    attrs.renderViaOffscreenBackBuffer = 1; // needed for pthread usage
+    attrs.renderViaOffscreenBackBuffer = 1;
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context("#canvas", &attrs);
     emscripten_webgl_make_context_current(ctx);
 
@@ -152,7 +176,6 @@ static void initWebGL(void* arg) {
     gRenderState.surface = surface;
     gRenderState.canvas = surface->getCanvas();
 
-    // Start the main loop on the main thread
     emscripten_set_main_loop(renderFrame, 0, 0);
 }
 #endif
@@ -166,10 +189,8 @@ void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::
     gRenderState.renderCv = &renderCv;
 
 #ifdef __EMSCRIPTEN__
-    // WebGL context must be created on the main browser thread, not a pthread
     int dims[2] = {width, height};
     emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, initWebGL, dims);
-    // render thread can now exit — main loop keeps firing renderFrame
 #else
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);

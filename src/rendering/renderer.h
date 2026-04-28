@@ -10,6 +10,7 @@
 #include <vector>
 #include "../base/rect.h"
 #include "../base/matrix.h"
+#include "shapeProcessor.h"
 
 struct setBackground {
     uint8_t red;
@@ -18,14 +19,12 @@ struct setBackground {
 };
 
 struct drawVideoFrame {
-    // YUV path
     std::shared_ptr<std::vector<uint8_t>> yPlane;
     std::shared_ptr<std::vector<uint8_t>> uPlane;
     std::shared_ptr<std::vector<uint8_t>> vPlane;
     int yStride;
     int uStride;
     int vStride;
-
     int videoFrameWidth;
     int videoFrameHeight;
     int x;
@@ -34,7 +33,8 @@ struct drawVideoFrame {
 };
 
 struct rendererInstruction : setBackground, drawVideoFrame {
-    int instructionCode;
+    int instructionCode = 0;
+    std::shared_ptr<Shape> SWFShape;
 };
 
 void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv);

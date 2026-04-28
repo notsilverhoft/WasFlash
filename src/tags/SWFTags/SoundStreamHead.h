@@ -3,6 +3,6 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include "../tags.h"
 
-
-void throwErr(int errorCode, const char* Filename = nullptr, int SWFVersion = 0);
+SWFTag getSoundStreamHeadTag(rawSWFTag rawTag);

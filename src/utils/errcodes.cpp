@@ -5,7 +5,7 @@
 #include "errcodes.h"
 
 
-void throwErr(int errorCode, char* Filename, int SWFVersion) {
+void throwErr(int errorCode, const char* Filename, int SWFVersion) {
 
     switch( errorCode ) {
 
@@ -15,7 +15,7 @@ void throwErr(int errorCode, char* Filename, int SWFVersion) {
         break;
 
         case 21:
-            std::cerr << "File: " << Filename << " Has an invalid version! File may be corrupted, or improperly created! Please use another file!\n";
+            std::cerr << "File: " << Filename << " Has an invalid version( " << SWFVersion << ")! File may be corrupted, or improperly created! Please use another file!\n";
             exit(21);
         break;
 
@@ -82,6 +82,56 @@ void throwErr(int errorCode, char* Filename, int SWFVersion) {
         case 55:
             std::cerr << "LZMA Decompression failed with Error: MEM_ERROR (during decode)!\n";
             exit(55);
+        break;
+
+        case 181: // Tag #18 - Error #1
+            std::cerr << "Error while processing SoundStreamHead tag: MP3 Audio Compression is only allowed with SWF Versions 4+(Current is " << SWFVersion << ")! CODE:181";
+            exit(181);
+        break;
+       
+        case 182: // Tag #18 - Error #2
+            std::cerr << "Error while processing SoundStreamHead tag: Invalid Tag Params! -- StreamSoundSize is not 1 -- Your File is Likely Corrupted! CODE:182";
+            exit(182);
+        break;
+
+        case 183: // Tag #18 - Error #3
+            std::cerr << "Error while processing SoundStreamHead tag: Reserved Area is NOT Empty! Your File is Likely Corrupted! CODE:183\n";
+            exit(183);
+        break;
+
+        case 451: // Tag #45 - Error #1
+            std::cerr << "Error while processing SoundStreamHead2 tag: MP3 Audio Compression is only allowed with SWF Versions 4+(Current is " << SWFVersion << ")! CODE:451";
+            exit(451);
+        break;
+
+        case 452: // Tag #45 - Error #2
+            std::cerr << "Error while processing SoundStreamHead2 tag: Little Endian Uncompressed Audio is only allowed with SWF Versions 4+(Current is " << SWFVersion << ")! CODE:452";
+            exit(452);
+        break;
+        
+        case 453: // Tag #45 - Error #3
+            std::cerr << "Error while processing SoundStreamHead2 tag: Nellymoser 16 kHz Audio Compression is only allowed with SWF Versions 10+(Current is " << SWFVersion << ")! CODE:453";
+            exit(453);
+        break;
+
+        case 454: // Tag #45 - Error #4
+            std::cerr << "Error while processing SoundStreamHead2 tag: Nellymoser 8 kHz Audio Compression is only allowed with SWF Versions 10+(Current is " << SWFVersion << ")! CODE:454";
+            exit(454);
+        break;
+
+        case 455: // Tag #45 - Error #5
+            std::cerr << "Error while processing SoundStreamHead2 tag: Nellymoser Audio Compression is only allowed with SWF Versions 6+(Current is " << SWFVersion << ")! CODE:455";
+            exit(455);
+        break;
+
+        case 456: // Tag #45 - Error #6
+            std::cerr << "Error while processing SoundStreamHead2 tag: Speex Audio Compression is only allowed with SWF Versions 10+(Current is " << SWFVersion << ")! CODE:456";
+            exit(456);
+        break;
+
+        case 457: // Tag #18 - Error #7
+            std::cerr << "Error while processing SoundStreamHead2 tag: Reserved Area is NOT Empty! Your File is Likely Corrupted! CODE:457\n";
+            exit(457);
         break;
 
         case 601: // Tag #60 - Error #1

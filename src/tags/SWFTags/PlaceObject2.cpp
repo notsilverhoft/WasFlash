@@ -33,7 +33,7 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
     SWFShift(rawTag.tagData, 1);
 
-    binOut.PlaceObject2.Depth = static_cast<uint16_t>((rawTag.tagData[1] << 8) & rawTag.tagData[0]);
+    binOut.PlaceObject2.Depth = static_cast<uint16_t>((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
     
     // std::cout << "PlaceObject2: Depth: " << (int)binOut.PlaceObject2.Depth << "\n";
 
@@ -42,7 +42,7 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
     if ( binOut.PlaceObject2.PlaceFlagHasCharacter ) {
 
-        binOut.PlaceObject2.CharacterID = ((rawTag.tagData[1] << 8) & rawTag.tagData[0]);
+        binOut.PlaceObject2.CharacterID = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
         std::cout << "PlaceObject2: CharacterID: " << (int)binOut.PlaceObject2.CharacterID << "\n";
 
@@ -100,7 +100,7 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
         
     if ( binOut.PlaceObject2.PlaceFlagHasRatio ) {
 
-        binOut.PlaceObject2.Ratio = ((rawTag.tagData[1] << 8) & rawTag.tagData[0]);
+        binOut.PlaceObject2.Ratio = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
         std::cout << "PlaceObject2: Ratio: " << (int)binOut.PlaceObject2.Ratio << "\n";
 
@@ -115,7 +115,7 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
     if ( binOut.PlaceObject2.PlaceFlagHasClipDepth ) {
 
-        binOut.PlaceObject2.ClipDepth = ((rawTag.tagData[1] << 8) & rawTag.tagData[0]);
+        binOut.PlaceObject2.ClipDepth = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
         std::cout << "PlaceObject2: ClipDepth: " << (int)binOut.PlaceObject2.ClipDepth << "\n";
 
@@ -124,7 +124,7 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
     if ( binOut.PlaceObject2.PlaceFlagHasClipActions ) {
         
         std::cout << "PlaceObject2: Clip actions is not a supported feature is Action Script is not currently implemented!\n";
-        exit(1);
+        //exit(1);
 
     }
 

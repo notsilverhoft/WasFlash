@@ -40,6 +40,13 @@ MATRIX getMatrix(std::vector<uint8_t>& data) {
 
     }
 
+    else {
+
+        binOut.ScaleX = 1;
+        binOut.ScaleY = 1;
+
+    }
+
     binOut.HasRotate = bs.readUnsigned(1);
 
     totalBits += 1;
@@ -57,8 +64,8 @@ MATRIX getMatrix(std::vector<uint8_t>& data) {
 
     binOut.nTranslateBits = bs.readUnsigned(5);
 
-    binOut.TranslateX = static_cast<int>(bs.readSigned(binOut.nTranslateBits) / 65536.0f);
-    binOut.TranslateY = static_cast<int>(bs.readSigned(binOut.nTranslateBits) / 65536.0f);
+    binOut.TranslateX = static_cast<int>(bs.readSigned(binOut.nTranslateBits));
+    binOut.TranslateY = static_cast<int>(bs.readSigned(binOut.nTranslateBits));
 
     totalBits += (5 + (2 * binOut.nTranslateBits));
 

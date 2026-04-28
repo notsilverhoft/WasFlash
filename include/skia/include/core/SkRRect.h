@@ -8,12 +8,12 @@
 #ifndef SkRRect_DEFINED
 #define SkRRect_DEFINED
 
-#include "include/core/SkPoint.h"
-#include "include/core/SkRect.h"
-#include "include/core/SkScalar.h"
-#include "include/core/SkSpan.h"
-#include "include/core/SkTypes.h"
-#include "include/private/base/SkMacros.h"
+#include "SkPoint.h"
+#include "SkRect.h"
+#include "SkScalar.h"
+#include "SkSpan.h"
+#include "SkTypes.h"
+#include "../private/base/SkMacros.h"
 
 #include <cstdint>
 #include <cstring>
