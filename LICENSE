@@ -1,0 +1,50 @@
+MIT License with End-User Attribution Requirement
+
+Copyright (c) 2026 Johannes Raaff
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+2. Any product, service, website, application, or presentation that
+   incorporates, uses, or is derived from the Software must display visible
+   attribution to the original project in the end-user interface. This
+   attribution must:
+
+     a) Identify the project by name as "WasFlash".
+
+     b) Include a clearly visible, interactive link or button accessible to
+        the end user in the same context where the Software's functionality
+        is presented (for example, on the same webpage, within the same
+        application window, or on the same slide). The link or button must
+        direct the user to the original repository at:
+        https://github.com/notsilverhoft/WasFlash
+
+     c) Be visible without requiring the end user to inspect source code,
+        read documentation, or take any action beyond normal use of the
+        product. Attribution may be placed in a popup, overlay, footer,
+        about dialog, or similar UI element, provided that element is
+        reachable by the end user through a clearly labeled and reasonably
+        prominent control (such as a button, link, or icon) in the main
+        interface.
+
+     d) Not be hidden, obscured, removed, or presented in a manner
+        intended to discourage end users from noticing or accessing it.
+
+3. Any modified version of the Software must clearly indicate that changes
+   have been made to the original, and must not misrepresent the modified
+   version as the original WasFlash project.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
