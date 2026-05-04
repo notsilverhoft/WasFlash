@@ -1,0 +1,290 @@
+WasFlash Third-Party Notices
+=============================
+
+This file contains notices and license information for third-party libraries
+used in WasFlash.
+
+LGPL Relinking Notice
+---------------------
+WasFlash statically links FFmpeg, which is licensed under the GNU Lesser
+General Public License version 2.1 or later (LGPL v2.1+). To satisfy the
+LGPL's static linking requirement, WasFlash's compiled object files are
+provided alongside each binary release. They are distributed as a .zip
+archive in the GitHub Releases tab, bundled with the corresponding binary
+for each distribution (e.g. wasflash-wasm-objects.zip alongside the WASM
+release, wasflash-linux-objects.zip alongside the Linux native binary).
+
+Users may use these object files to relink WasFlash against a modified
+version of FFmpeg.
+
+The full text of the LGPL v2.1 is available at:
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+------------------------------------------------------------------------
+
+FFmpeg
+------
+Copyright (c) the FFmpeg developers
+Source: https://github.com/FFmpeg/FFmpeg
+
+WasFlash uses the following FFmpeg libraries, built from source:
+  libavformat, libavcodec, libavutil, libswscale, libswresample
+
+FFmpeg is built with the following flags (no GPL components enabled):
+  --disable-shared --enable-static --disable-programs --disable-doc
+  --disable-network
+
+Most files in FFmpeg are licensed under the GNU Lesser General Public
+License version 2.1 or later (LGPL v2.1+). Some files within FFmpeg carry
+MIT, X11, or BSD-style licenses; in combination, LGPL v2.1+ applies to
+FFmpeg as a whole. WasFlash does not pass --enable-gpl, --enable-version3,
+or --enable-nonfree, so no GPL components are active.
+
+See the LGPL Relinking Notice above for how object files are distributed
+to satisfy the static linking requirement.
+
+FFmpeg source code and full license details are available at:
+https://ffmpeg.org/download.html
+
+Independent JPEG Group (IJG) Credit
+------------------------------------
+The following files in FFmpeg's libavcodec are derived from libjpeg,
+developed by the Independent JPEG Group:
+
+  libavcodec/jfdctfst.c
+  libavcodec/jfdctint_template.c
+  libavcodec/jrevdct.c
+
+As required by the IJG license, this documentation acknowledges that
+WasFlash uses software based on the work of the Independent JPEG Group.
+Any changes made to these files within the FFmpeg source are noted in
+FFmpeg's own source history.
+
+------------------------------------------------------------------------
+
+zlib
+----
+Copyright (C) 1995-2026 Jean-loup Gailly and Mark Adler
+Source: https://github.com/madler/zlib
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the
+use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Jean-loup Gailly        Mark Adler
+  jloup@gzip.org          madler@alumni.caltech.edu
+
+------------------------------------------------------------------------
+
+liblzma (XZ Utils)
+------------------
+Source: https://github.com/kobolabs/liblzma
+
+The liblzma library is built from source with the following flags
+(compression only, no standalone tools):
+  --disable-shared --enable-static --disable-xz --disable-xzdec
+  --disable-lzmadec --disable-lzmainfo --disable-scripts
+
+liblzma is in the public domain. The LGPL portions of XZ Utils apply only
+to the getopt_long code used by the command line tools (xz, xzdec, lzmadec),
+none of which are built or linked by WasFlash. No license obligations apply
+to the use of liblzma in this project.
+
+This software includes code from XZ Utils <http://tukaani.org/xz/>.
+
+Full license details are available at:
+https://tukaani.org/xz/
+
+------------------------------------------------------------------------
+
+Skia
+----
+Copyright (c) 2011 Google Inc. All rights reserved.
+Source: https://skia.googlesource.com/skia.git
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+  * Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+------------------------------------------------------------------------
+
+MiniAudio
+---------
+Copyright 2025 David Reid
+Source: https://github.com/mackron/miniaudio
+
+MiniAudio is used as a single-header library (miniaudio.h). It is
+dual-licensed under the Unlicense (public domain) and MIT No Attribution
+(MIT-0). Neither license requires attribution. WasFlash uses it under
+MIT No Attribution:
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
+
+------------------------------------------------------------------------
+
+Emscripten
+----------
+Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+Source: https://github.com/emscripten-core/emsdk
+
+Emscripten is available under two licenses. WasFlash uses it under the MIT
+license:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+The full University of Illinois/NCSA Open Source License alternative is
+available in the Emscripten source repository.
+
+Emscripten — Node.js Component
+--------------------------------
+Emscripten uses portions of Node.js source code in src/library_path.js,
+in accordance with the MIT license:
+
+Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+Emscripten — musl libc (WASM build only)
+-----------------------------------------
+Emscripten bundles musl libc for the WebAssembly build. musl libc is
+licensed under the MIT license. Full license text is available at:
+https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT
+
+------------------------------------------------------------------------
+
+Linux System Libraries (native build only)
+-------------------------------------------
+The native build links against the following system-provided libraries:
+  -lGL, -lX11, -ldl, -lpthread
+
+libGL is provided by Mesa or a vendor driver. Mesa is MIT licensed.
+Full license: https://docs.mesa3d.org/license.html
+
+libX11 is provided by X.Org and is MIT licensed.
+Full license: https://gitlab.freedesktop.org/xorg/lib/libx11/-/blob/master/COPYING
+
+libdl and libpthread are part of the GNU C Library (glibc), licensed under
+LGPL v2.1+ with a special linking exception. The exception explicitly permits
+applications to be distributed without being subject to the LGPL, regardless
+of whether they link statically or dynamically against glibc. No object files
+or additional compliance steps are required as a result of linking these
+libraries.
+
+------------------------------------------------------------------------
+
+GLFW (native build only)
+-------------------------
+Copyright (c) 2002-2006 Marcus Geelnard
+Copyright (c) 2006-2019 Camilla Löwy
+
+GLFW is linked as a system library in the native build (-lglfw).
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the
+use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not
+     be misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+------------------------------------------------------------------------
+
+FreeType (native build only)
+-----------------------------
+Copyright (C) 1996-2023 by David Turner, Robert Wilhelm, and Werner Lemberg.
+
+FreeType is linked as a system library in the native build (-lfreetype).
+WasFlash uses FreeType under the FreeType License (not the GPL alternative).
+
+The FreeType License is available at:
+https://gitlab.freedesktop.org/freetype/freetype/-/blob/master/docs/FTL.TXT
+
+FreeType source code is available at:
+https://freetype.org/download.html
+
+------------------------------------------------------------------------
