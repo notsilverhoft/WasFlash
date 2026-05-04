@@ -33,11 +33,6 @@ I used inbuilt EMScripten dependencies, and used MiniAudio, rather than SDL, and
 - [ ] Community testing
 
 Please feel free to use the included swf files in samples if you do not have any!
-
-## License
-
-TBD
-
 ---
 
 *WasFlash is not affiliated with Adobe Inc. Flash and SWF are trademarks of Adobe.*
