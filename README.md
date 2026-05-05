@@ -7,13 +7,29 @@ The Hope:
 
 A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), designed for both PC and Web(Using EMScripten :D). In essence, this would be able to run flash games in the modern day. This will process .SWF files and display their contents, much like current SWF players like Ruffle and LightSpark, but with a higher focus on portability, and simple integration with websites.  
 
-## Goals & Progress
+## Goals & Progress - Current Scope
 
 - [ ] Full support without ActionScript
-    - [ ] DefineShape Bitmap and Gradient Support
+    - [ ] Gradient Support - Almost Done(Tied to Defineshape4)...
     - [ ] DefineShape 4 Support
+        - [ ] Parse tag
+        - [ ] Do a little reworking of the shape processor to work with new flags.
+        - [ ] Add to tag pipeline
+        - [ ] Ensure rendering can handle new flags
+    - [ ] Bitmap Support
+        - [ ] DefineBits
+        - [ ] JPEGTables
+        - [ ] DefineBitsJPEG2
+        - [ ] DefineBitsJPEG3
+        - [ ] DefineBitsJPEG4
+        - [ ] DefineBitsLossless
+        - [ ] DefineBitsLossless2
+        - [ ] Impliment into DefineShape Tags.
     - [ ] DefineFont Support
     - [ ] DefineText Support
+    - [ ] PlaceCharacter3
+    - [ ] Optimize for smoother playback
+    - [ ] Work on an actual dependency script
     - [ ] To be continued...
 
 
