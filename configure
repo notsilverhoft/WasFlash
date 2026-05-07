@@ -28,7 +28,7 @@ else
     IS_EMSCRIPTEN=0
     LDFLAGS="-L./include/FFmpeg/lib -L./include/zlib/lib -L./include/skia/lib -L./include/liblzma/lib \
 -Wl,--start-group -lavformat -lavcodec -lavutil -lswscale -lswresample -Wl,--end-group \
--lz -llzma -lskia -lglfw -lfreetype -lGL -lX11 -ldl -lpthread "
+-lz -llzma -lskia -lglfw -lfreetype -lGL -lX11 -ldl -lpthread -ldrm"
 fi
 
 # Default install prefix (system)

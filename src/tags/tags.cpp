@@ -28,6 +28,7 @@
 #include "../rendering/shapeProcessor.h"
 #include "../base/colorTransformAlpha.h"
 #include "SWFTags/AVM/AVM2/doABC.h"
+#include "../../include/skia/include/core/SkColorFilter.h"
 
 
 rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
@@ -48,13 +49,6 @@ rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
     uint16_t shortCodeLength = ((shortTwo << 8) | (shortOne));
 
     binOut.tagCode = ((shortCodeLength >> 6) & 0x3FF);
-
-    bool output = false;
-
-    if (binOut.tagCode != 9 && binOut.tagCode != 60 && binOut.tagCode != 61 && binOut.tagCode != 69 && binOut.tagCode != 19 && binOut.tagCode != 18 && binOut.tagCode != 45) {
-        output = true;
-        std::cout << "\nTag Code: " << (int)binOut.tagCode << "\n";
-    }
 
     uint8_t shortTagLength = (shortCodeLength & 0x3F);
     binOut.shortTagLength = shortTagLength;
@@ -106,9 +100,6 @@ rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
         binOut.tagData.insert(binOut.tagData.end(), SWFFile.begin(), SWFFile.begin() + longTagLength);
         SWFShift(SWFFile, longTagLength);
 
-        if (output)
-            std::cout << "Tag length:" << longTagLength << "\n";
-
     } else {
 
         if (shortTagLength > SWFFile.size()) {
@@ -122,12 +113,7 @@ rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
         binOut.tagData.insert(binOut.tagData.end(), SWFFile.begin(), SWFFile.begin() + shortTagLength);
         SWFShift(SWFFile, shortTagLength);
 
-        if (output)
-            std::cout << "Tag length: " << static_cast<int>(shortTagLength) << "\n";
     }
-
-    if (output)
-        std::cout << "Actual Tag length: " << binOut.tagData.size() << "\n";
 
     return binOut;
 }
@@ -188,7 +174,6 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
 
         case 69:
             binOut = getFileAttributesTag(rawTag);
-            std::cout << "ActionScript 3: " << binOut.FileAttributes.ActionScript3 << "\n";
         break;
 
         case 72:
@@ -207,17 +192,35 @@ struct DisplayListEntry {
     bool hasColorTransform = false;
 };
 
+sk_sp<SkColorFilter> buildColorFilter(const CXFORMWITHALPHA& ct) {
+    float multR = ct.HasMultTerms ? ct.RedMultTerm   / 256.0f : 1.0f;
+    float multG = ct.HasMultTerms ? ct.GreenMultTerm / 256.0f : 1.0f;
+    float multB = ct.HasMultTerms ? ct.BlueMultTerm  / 256.0f : 1.0f;
+    float multA = ct.HasMultTerms ? ct.AlphaMultTerm / 256.0f : 1.0f;
+    float addR  = ct.HasAddTerms  ? ct.RedAddTerm    / 255.0f : 0.0f;
+    float addG  = ct.HasAddTerms  ? ct.GreenAddTerm  / 255.0f : 0.0f;
+    float addB  = ct.HasAddTerms  ? ct.BlueAddTerm   / 255.0f : 0.0f;
+    float addA  = ct.HasAddTerms  ? ct.AlphaAddTerm  / 255.0f : 0.0f;
+    float matrix[20] = {
+        multR, 0,     0,     0,     addR,
+        0,     multG, 0,     0,     addG,
+        0,     0,     multB, 0,     addB,
+        0,     0,     0,     multA, addA
+    };
+    return SkColorFilters::Matrix(matrix);
+}
+
 void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv, std::atomic<bool>& running, const SWFHeader& header) {
 
     (void)running;
 
-    std::unordered_map<int16_t, SWFTag>        processedTags;
-    std::unordered_map<uint16_t, SWFCharacter> savedCharacters;
-    std::deque<std::vector<uint8_t>>           queuedAudioFrames;
-    std::deque<rendererInstruction>            queuedRenderingInstructions;
+    std::unordered_map<int16_t, SWFTag>               processedTags;
+    std::unordered_map<uint16_t, SWFCharacter>        savedCharacters;
+    std::deque<std::vector<uint8_t>>                  queuedAudioFrames;
+    std::deque<rendererInstruction>                   queuedRenderingInstructions;
 
-    std::map<uint16_t, rendererInstruction>    displayList;
-    std::map<uint16_t, DisplayListEntry>       displayListEntries;
+    std::map<uint16_t, rendererInstruction>           displayList;
+    std::map<uint16_t, DisplayListEntry>              displayListEntries;
 
     rendererInstruction backgroundInstruction;
     bool hasBackground = false;
@@ -238,9 +241,13 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             case 2:
             {
                 instruction.instructionCode = 3;
-                Shape transformed = transformShape(savedCharacters.at(characterID).SWFShape, matrix, header.SWFFrameSize);
-                if (hasColorTransform) applyColorTransform(transformed, colorTransform);
-                instruction.SWFShape = std::make_shared<Shape>(transformed);
+                instruction.SWFShape = savedCharacters.at(characterID).SWFShape;
+
+                if (hasColorTransform) {
+                    instruction.colorFilter = buildColorFilter(colorTransform);
+                }
+
+                instruction.canvasTransform = transformShape(*instruction.SWFShape, matrix);
             }
             break;
 
@@ -248,6 +255,12 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
         return instruction;
 
+    };
+
+    auto updateTransform = [&](uint16_t depth, MATRIX matrix) {
+        if (displayList.find(depth) != displayList.end() && displayList[depth].SWFShape) {
+            displayList[depth].canvasTransform = transformShape(*displayList[depth].SWFShape, matrix);
+        }
     };
 
     auto retroactiveUpdate = [&](uint16_t shapeID) {
@@ -265,20 +278,14 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
         if (stream.empty() && done) break;
 
-        SWFTag tag = stream.back();
+        SWFTag tag = std::move(stream.back());
         stream.pop_back();
         lock.unlock();
-
-        std::cout << "Current Tag to Process: " << tag.tagCode << "\n";
-
-        rendererInstruction instruction;
 
         switch (tag.tagCode) {
 
             case 1: // ShowFrame
             {
-                std::cout << "Hit ShowFrameTag\n";
-
                 if (hasBackground)
                     pushRendererInstruction(backgroundInstruction, renderStream, renderStreamMutex, renderCv);
 
@@ -304,11 +311,9 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             break;
 
             case 2: // DefineShape
-                std::cout << "Processing Shape Started!\n";
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 1)};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 1))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
-                std::cout << "Processing Shape Ended!\n";
                 nextFrame = std::chrono::steady_clock::now();
             break;
 
@@ -338,11 +343,9 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             break;
 
             case 22: // DefineShape2
-                std::cout << "Processing Shape Started!\n";
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 2)};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 2))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
-                std::cout << "Processing Shape Ended!\n";
                 nextFrame = std::chrono::steady_clock::now();
             break;
 
@@ -372,19 +375,12 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                         }
                         else if (tag.PlaceObject2.PlaceFlagHasClipDepth) {
                             displayListEntries[depth] = {characterID, matrix, {}, false};
-                            // store the entry but don't add to displayList
-                            std::cout << "PlaceObject2: SKIPPED characterID=" << characterID << " at depth=" << depth << " tagCode=" << processedTags.at((int16_t)characterID).tagCode << "(Has Clip Depth)\n";
                         }
                         else if (savedCharacters.find(characterID) != savedCharacters.end()) {
                             displayList[depth] = buildInstruction(characterID, matrix,
                                 tag.PlaceObject2.PlaceFlagHasColorTransform,
                                 tag.PlaceObject2.ColorTransform);
-                                std::cout << "PlaceObject2: placed characterID=" << characterID << " at depth=" << depth << " tagCode=" << processedTags.at((int16_t)characterID).tagCode << "\n";
-                        } else {
-                            std::cout << "PlaceObject2: SKIPPED characterID=" << characterID << " at depth=" << depth << " (not in savedCharacters)\n";
                         }
-                    } else {
-                        std::cout << "PlaceObject2: SKIPPED characterID=" << characterID << " at depth=" << depth << " (not in processedTags)\n";
                     }
 
                 } else if (tag.PlaceObject2.PlaceFlagMove) {
@@ -393,21 +389,19 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
                         DisplayListEntry& entry = displayListEntries[depth];
 
-                        if (tag.PlaceObject2.PlaceFlagHasMatrix) {
-                            entry.matrix = tag.PlaceObject2.Matrix;
-                        }
-
                         if (tag.PlaceObject2.PlaceFlagHasColorTransform) {
                             entry.colorTransform = tag.PlaceObject2.ColorTransform;
                             entry.hasColorTransform = true;
-                        }
-
-                        if (processedTags.find((int16_t)entry.characterID) != processedTags.end()) {
-                            int tagCode = processedTags.at((int16_t)entry.characterID).tagCode;
-                            if (tagCode != 60 && savedCharacters.find(entry.characterID) != savedCharacters.end()) {
-                                displayList[depth] = buildInstruction(entry.characterID, entry.matrix,
-                                    entry.hasColorTransform, entry.colorTransform);
+                            if (processedTags.find((int16_t)entry.characterID) != processedTags.end()) {
+                                int tagCode = processedTags.at((int16_t)entry.characterID).tagCode;
+                                if (tagCode != 60 && savedCharacters.find(entry.characterID) != savedCharacters.end()) {
+                                    displayList[depth] = buildInstruction(entry.characterID, entry.matrix,
+                                        entry.hasColorTransform, entry.colorTransform);
+                                }
                             }
+                        } else if (tag.PlaceObject2.PlaceFlagHasMatrix) {
+                            entry.matrix = tag.PlaceObject2.Matrix;
+                            updateTransform(depth, entry.matrix);
                         }
 
                     }
@@ -422,11 +416,9 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             break;
 
             case 32: // DefineShape3
-                std::cout << "Processing Shape Started!\n";
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 3)};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 3))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
-                std::cout << "Processing Shape Ended!\n";
                 nextFrame = std::chrono::steady_clock::now();
             break;
 
@@ -455,10 +447,6 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
             case 61: // VideoFrame
             {
-                std::cout << "VideoFrame: StreamID=" << tag.VideoFrame.StreamID
-                          << " processedTags=" << (processedTags.find(tag.VideoFrame.StreamID) != processedTags.end())
-                          << " savedCharacters=" << (savedCharacters.find(tag.VideoFrame.StreamID) != savedCharacters.end()) << "\n";
-
                 if (processedTags.find(tag.VideoFrame.StreamID) == processedTags.end() ||
                     savedCharacters.find(tag.VideoFrame.StreamID) == savedCharacters.end())
                     break;

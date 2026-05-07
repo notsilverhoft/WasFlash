@@ -44,55 +44,61 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
         binOut.PlaceObject2.CharacterID = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
-        std::cout << "PlaceObject2: CharacterID: " << (int)binOut.PlaceObject2.CharacterID << "\n";
+        // std::cout << "PlaceObject2: CharacterID: " << (int)binOut.PlaceObject2.CharacterID << "\n";
 
     }
 
     if ( binOut.PlaceObject2.PlaceFlagHasMatrix ) {
 
         binOut.PlaceObject2.Matrix = getMatrix(rawTag.tagData);
-        std::cout << "PlaceObject2: Matrix: HasScale: " << (int)binOut.PlaceObject2.Matrix.HasScale << "\n";
+        // std::cout << "PlaceObject2: Matrix: HasScale: " << (int)binOut.PlaceObject2.Matrix.HasScale << "\n";
         if ( binOut.PlaceObject2.Matrix.HasScale ) {
 
-            std::cout << "PlaceObject2: Matrix: ScaleX: " << binOut.PlaceObject2.Matrix.ScaleX << "\n";
-            std::cout << "PlaceObject2: Matrix: ScaleY: " << binOut.PlaceObject2.Matrix.ScaleY << "\n";
+            // std::cout << "PlaceObject2: Matrix: ScaleX: " << binOut.PlaceObject2.Matrix.ScaleX << "\n";
+            // std::cout << "PlaceObject2: Matrix: ScaleY: " << binOut.PlaceObject2.Matrix.ScaleY << "\n";
 
         }
 
-        std::cout << "PlaceObject2: Matrix: HasRotate: " << (int)binOut.PlaceObject2.Matrix.HasRotate << "\n";
+        // std::cout << "PlaceObject2: Matrix: HasRotate: " << (int)binOut.PlaceObject2.Matrix.HasRotate << "\n";
         if ( binOut.PlaceObject2.Matrix.HasRotate ) {
 
-            std::cout << "PlaceObject2: Matrix: RotateSkew0: " << binOut.PlaceObject2.Matrix.RotateSkew0 << "\n";
-            std::cout << "PlaceObject2: Matrix: RotateSkew1: " << binOut.PlaceObject2.Matrix.RotateSkew1 << "\n";
+            // std::cout << "PlaceObject2: Matrix: RotateSkew0: " << binOut.PlaceObject2.Matrix.RotateSkew0 << "\n";
+            // std::cout << "PlaceObject2: Matrix: RotateSkew1: " << binOut.PlaceObject2.Matrix.RotateSkew1 << "\n";
 
         }
         
-        std::cout << "PlaceObject2: Matrix: TranslateX: " << binOut.PlaceObject2.Matrix.TranslateX << "\n";
-        std::cout << "PlaceObject2: Matrix: TranslateY: " << binOut.PlaceObject2.Matrix.TranslateY << "\n";
+        // std::cout << "PlaceObject2: Matrix: TranslateX: " << binOut.PlaceObject2.Matrix.TranslateX << "\n";
+        // std::cout << "PlaceObject2: Matrix: TranslateY: " << binOut.PlaceObject2.Matrix.TranslateY << "\n";
+
+    }
+
+    else {
+
+        binOut.PlaceObject2.Matrix = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     }
 
     if ( binOut.PlaceObject2.PlaceFlagHasColorTransform ) {
 
         binOut.PlaceObject2.ColorTransform = getColorTransformWithAlpha(rawTag.tagData);
-        std::cout << "PlaceObject2: ColorTransform: HasAddTerms: " << binOut.PlaceObject2.ColorTransform.HasAddTerms << "\n";
-        std::cout << "PlaceObject2: ColorTransform: HasMultTerms: " << binOut.PlaceObject2.ColorTransform.HasMultTerms << "\n";
+        // std::cout << "PlaceObject2: ColorTransform: HasAddTerms: " << binOut.PlaceObject2.ColorTransform.HasAddTerms << "\n";
+        // std::cout << "PlaceObject2: ColorTransform: HasMultTerms: " << binOut.PlaceObject2.ColorTransform.HasMultTerms << "\n";
 
         if ( binOut.PlaceObject2.ColorTransform.HasMultTerms ) {
 
-            std::cout << "PlaceObject2: ColorTransform: RedMultTerm: " << binOut.PlaceObject2.ColorTransform.RedMultTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: GreenMultTerm: " << binOut.PlaceObject2.ColorTransform.GreenMultTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: BlueMultTerm: " << binOut.PlaceObject2.ColorTransform.BlueMultTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: AlphaMultTerm: " << binOut.PlaceObject2.ColorTransform.AlphaMultTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: RedMultTerm: " << binOut.PlaceObject2.ColorTransform.RedMultTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: GreenMultTerm: " << binOut.PlaceObject2.ColorTransform.GreenMultTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: BlueMultTerm: " << binOut.PlaceObject2.ColorTransform.BlueMultTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: AlphaMultTerm: " << binOut.PlaceObject2.ColorTransform.AlphaMultTerm << "\n";
 
         }
 
         if ( binOut.PlaceObject2.ColorTransform.HasAddTerms ) {
 
-            std::cout << "PlaceObject2: ColorTransform: RedAddTerm: " << binOut.PlaceObject2.ColorTransform.RedAddTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: GreenAddTerm: " << binOut.PlaceObject2.ColorTransform.GreenAddTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: BlueAddTerm: " << binOut.PlaceObject2.ColorTransform.BlueAddTerm << "\n";
-            std::cout << "PlaceObject2: ColorTransform: AlphaAddTerm: " << binOut.PlaceObject2.ColorTransform.AlphaAddTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: RedAddTerm: " << binOut.PlaceObject2.ColorTransform.RedAddTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: GreenAddTerm: " << binOut.PlaceObject2.ColorTransform.GreenAddTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: BlueAddTerm: " << binOut.PlaceObject2.ColorTransform.BlueAddTerm << "\n";
+            // std::cout << "PlaceObject2: ColorTransform: AlphaAddTerm: " << binOut.PlaceObject2.ColorTransform.AlphaAddTerm << "\n";
 
         }
 
@@ -102,14 +108,14 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
         binOut.PlaceObject2.Ratio = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
-        std::cout << "PlaceObject2: Ratio: " << (int)binOut.PlaceObject2.Ratio << "\n";
+        // std::cout << "PlaceObject2: Ratio: " << (int)binOut.PlaceObject2.Ratio << "\n";
 
     }
 
     if ( binOut.PlaceObject2.PlaceFlagHasName ) {
 
         binOut.PlaceObject2.Name = getString(rawTag.tagData);
-        std::cout << "PlaceObject2: Name: " << binOut.PlaceObject2.Name << "\n";
+        // std::cout << "PlaceObject2: Name: " << binOut.PlaceObject2.Name << "\n";
 
     }
 
@@ -117,13 +123,13 @@ SWFTag getPlaceObject2Tag(rawSWFTag& rawTag) {
 
         binOut.PlaceObject2.ClipDepth = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
         SWFShift(rawTag.tagData, 2);
-        std::cout << "PlaceObject2: ClipDepth: " << (int)binOut.PlaceObject2.ClipDepth << "\n";
+        // std::cout << "PlaceObject2: ClipDepth: " << (int)binOut.PlaceObject2.ClipDepth << "\n";
 
     }
 
     if ( binOut.PlaceObject2.PlaceFlagHasClipActions ) {
         
-        std::cout << "PlaceObject2: Clip actions is not a supported feature is Action Script is not currently implemented!\n";
+        // std::cout << "PlaceObject2: Clip actions is not a supported feature is Action Script is not currently implemented!\n";
         //exit(1);
 
     }

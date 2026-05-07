@@ -22,10 +22,10 @@ FILLSTYLE getFillStyle(std::vector<uint8_t>& data, int shapeVersion) {
             binOut.Green = data[1];
             binOut.Blue = data[2];
             binOut.Alpha = data[3];
-            std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Red: " << (int)binOut.Red << "\n";
-            std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Green: " << (int)binOut.Green << "\n";
-            std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Blue: " << (int)binOut.Blue << "\n";
-            std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Alpha: " << (int)binOut.Red << "\n";
+            // std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Red: " << (int)binOut.Red << "\n";
+            // std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Green: " << (int)binOut.Green << "\n";
+            // std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Blue: " << (int)binOut.Blue << "\n";
+            // std::cout << "FillStyle: Type: "  << (int)binOut.FillStyleType << ": Alpha: " << (int)binOut.Red << "\n";
             SWFShift(data, 4);
 
         }

@@ -1,4 +1,3 @@
-// shapeProcessor.cpp
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -15,37 +14,33 @@
 #include "../../include/skia/include/effects/SkGradient.h"
 #include "../../include/skia/include/effects/SkColorMatrix.h"
 #include "../../include/skia/include/core/SkColorFilter.h"
+#include "../../include/skia/include/core/SkPictureRecorder.h"
+#include "../../include/skia/include/core/SkCanvas.h"
+#include "../../include/skia/include/core/SkPathUtils.h"
 #include "../base/rect.h"
 #include "../base/shapeWithStyle.h"
 #include "../base/shapeRecord.h"
 #include "../base/colorTransformAlpha.h"
+
 
 std::vector<SkPaint> getSkiaFills(std::vector<FILLSTYLE> rawFills, int shapeVersion) {
 
     std::vector<SkPaint> binOut;
     binOut.resize(rawFills.size());
 
-    for (int i = 0; i < rawFills.size(); i++) {
+    for (int i = 0; i < (int)rawFills.size(); i++) {
 
         FILLSTYLE CurrentFillStyle = rawFills[i];
 
         if ( CurrentFillStyle.FillStyleType == 0x00 ) {
 
             if ( shapeVersion < 3 ) {
-
                 binOut[i].setColor(SkColorSetRGB(CurrentFillStyle.Red, CurrentFillStyle.Green, CurrentFillStyle.Blue));
-
-            }
-
-            else {
-
+            } else {
                 binOut[i].setColor(SkColorSetARGB(CurrentFillStyle.Alpha, CurrentFillStyle.Red, CurrentFillStyle.Green, CurrentFillStyle.Blue));
-
             }
 
-        }
-
-        else if ( CurrentFillStyle.FillStyleType == 0x10 || CurrentFillStyle.FillStyleType == 0x12 || CurrentFillStyle.FillStyleType == 0x13 ) {
+        } else if ( CurrentFillStyle.FillStyleType == 0x10 || CurrentFillStyle.FillStyleType == 0x12 || CurrentFillStyle.FillStyleType == 0x13 ) {
 
             std::vector<GRADRECORD>& records = (CurrentFillStyle.FillStyleType == 0x13)
                 ? CurrentFillStyle.FocalGradient.GradientRecords
@@ -95,29 +90,36 @@ std::vector<SkPaint> getSkiaFills(std::vector<FILLSTYLE> rawFills, int shapeVers
 
             SkMatrix gradMatrix;
             gradMatrix.setAll(
-                gm.ScaleX / 20.0f,      gm.RotateSkew1 / 20.0f,  gm.TranslateX / 20.0f,
-                gm.RotateSkew0 / 20.0f, gm.ScaleY / 20.0f,        gm.TranslateY / 20.0f,
-                0,                       0,                         1
+                gm.ScaleX / 20.0f,       gm.RotateSkew1 / 20.0f,  gm.TranslateX / 20.0f,
+                gm.RotateSkew0 / 20.0f,  gm.ScaleY / 20.0f,        gm.TranslateY / 20.0f,
+                0,                        0,                          1
             );
 
             sk_sp<SkShader> shader;
 
             if ( CurrentFillStyle.FillStyleType == 0x10 ) {
 
-                SkPoint pts[2] = {{-1.0f, 0.0f}, {1.0f, 0.0f}};
-                shader = SkShaders::LinearGradient(pts, grad, &gradMatrix);
+                SkPoint pts[2] = {{-16384.0f, 0.0f}, {16384.0f, 0.0f}};
+                gradMatrix.mapPoints(pts);
+                shader = SkShaders::LinearGradient(pts, grad, nullptr);
 
             } else if ( CurrentFillStyle.FillStyleType == 0x12 ) {
 
-                shader = SkShaders::RadialGradient({0.0f, 0.0f}, 1.0f, grad, &gradMatrix);
+                SkPoint radialPts[2] = {{0.0f, 0.0f}, {16384.0f, 0.0f}};
+                gradMatrix.mapPoints(radialPts);
+                float radius = SkPoint::Distance(radialPts[0], radialPts[1]);
+                shader = SkShaders::RadialGradient(radialPts[0], radius, grad, nullptr);
 
             } else {
 
-                float fp = CurrentFillStyle.FocalGradient.FocalPoint;
+                float fp = CurrentFillStyle.FocalGradient.FocalPoint * 16384.0f;
+                SkPoint focalPts[3] = {{fp, 0.0f}, {0.0f, 0.0f}, {16384.0f, 0.0f}};
+                gradMatrix.mapPoints(focalPts);
+                float radius = SkPoint::Distance(focalPts[1], focalPts[2]);
                 shader = SkShaders::TwoPointConicalGradient(
-                    {fp, 0.0f}, 0.0f,
-                    {0.0f, 0.0f}, 1.0f,
-                    grad, &gradMatrix
+                    focalPts[0], 0.0f,
+                    focalPts[1], radius,
+                    grad, nullptr
                 );
 
             }
@@ -159,9 +161,7 @@ std::vector<SkPaint> getSkiaLines(std::vector<LINESTYLE> rawLines, std::vector<L
 
         }
 
-    }
-
-    else {
+    } else {
 
         binOut.resize(rawLines2.size());
 
@@ -170,15 +170,11 @@ std::vector<SkPaint> getSkiaLines(std::vector<LINESTYLE> rawLines, std::vector<L
             LINESTYLE2& ls = rawLines2[i];
 
             if ( ls.HasFillFlag ) {
-
                 std::vector<FILLSTYLE> fillVec = { ls.FillType };
                 std::vector<SkPaint> fillPaint = getSkiaFills(fillVec, shapeVersion);
                 binOut[i] = fillPaint[0];
-
             } else {
-
                 binOut[i].setColor(SkColorSetARGB(ls.Alpha, ls.Red, ls.Green, ls.Blue));
-
             }
 
             binOut[i].setStyle(SkPaint::kStroke_Style);
@@ -235,34 +231,34 @@ void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct) {
 
 }
 
-// A single continuous series of points forming part of a path
+
+struct Point {
+    int  x, y;
+    bool isBezierControl;
+};
+
 struct PathSegment {
-    std::vector<std::pair<int,int>> points;
-    std::vector<bool> isBezierControl;
+    std::vector<Point> points;
 
     void reset(int x, int y) {
         points.clear();
-        isBezierControl.clear();
-        points.push_back({x, y});
-        isBezierControl.push_back(false);
+        points.push_back({x, y, false});
     }
 
     void addPoint(int x, int y, bool bezierControl) {
-        points.push_back({x, y});
-        isBezierControl.push_back(bezierControl);
+        points.push_back({x, y, bezierControl});
     }
 
     void flip() {
         std::reverse(points.begin(), points.end());
-        std::reverse(isBezierControl.begin(), isBezierControl.end());
     }
 
     bool isEmpty() const {
         return points.size() <= 1;
     }
 
-    std::pair<int,int> start() const { return points.front(); }
-    std::pair<int,int> end() const { return points.back(); }
+    std::pair<int,int> start() const { return {points.front().x, points.front().y}; }
+    std::pair<int,int> end()   const { return {points.back().x,  points.back().y};  }
 };
 
 struct PendingPath {
@@ -273,28 +269,26 @@ struct PendingPath {
         if (newSeg.isEmpty()) return;
 
         bool startOpen = true;
-        bool endOpen = true;
-        int i = 0;
+        bool endOpen   = true;
+        int  i         = 0;
 
         while ((startOpen || endOpen) && i < (int)segments.size()) {
 
             PathSegment& other = segments[i];
 
             if (startOpen && other.end() == newSeg.start()) {
-                for (int j = 1; j < (int)newSeg.points.size(); j++) {
-                    other.points.push_back(newSeg.points[j]);
-                    other.isBezierControl.push_back(newSeg.isBezierControl[j]);
-                }
-                newSeg = segments[i];
-                segments.erase(segments.begin() + i);
+                other.points.insert(other.points.end(),
+                newSeg.points.begin() + 1, newSeg.points.end());
+                newSeg = std::move(segments[i]);
+                std::swap(segments[i], segments.back());
+                segments.pop_back();
                 startOpen = false;
 
             } else if (endOpen && newSeg.end() == other.start()) {
-                for (int j = 1; j < (int)other.points.size(); j++) {
-                    newSeg.points.push_back(other.points[j]);
-                    newSeg.isBezierControl.push_back(other.isBezierControl[j]);
-                }
-                segments.erase(segments.begin() + i);
+                newSeg.points.insert(newSeg.points.end(),
+                other.points.begin() + 1, other.points.end());
+                std::swap(segments[i], segments.back());
+                segments.pop_back();
                 endOpen = false;
 
             } else {
@@ -303,30 +297,32 @@ struct PendingPath {
 
         }
 
-        segments.push_back(newSeg);
+        segments.push_back(std::move(newSeg));
 
     }
 
     void pushStroke(PathSegment seg) {
-        segments.push_back(seg);
+        segments.push_back(std::move(seg));
     }
 
     void buildFillPath(SkPathBuilder& builder) {
         for (auto& seg : segments) {
             if (seg.isEmpty()) continue;
-            builder.moveTo(seg.points[0].first, seg.points[0].second);
+            builder.moveTo(seg.points[0].x / 20.0f, seg.points[0].y / 20.0f);
             int j = 1;
             while (j < (int)seg.points.size()) {
-                if (seg.isBezierControl[j]) {
-                    int cx = seg.points[j].first;
-                    int cy = seg.points[j].second;
+                if (seg.points[j].isBezierControl) {
+                    float cx = seg.points[j].x / 20.0f;
+                    float cy = seg.points[j].y / 20.0f;
                     j++;
                     if (j < (int)seg.points.size()) {
-                        builder.quadTo(cx, cy, seg.points[j].first, seg.points[j].second);
+                        builder.quadTo(cx, cy,
+                                       seg.points[j].x / 20.0f,
+                                       seg.points[j].y / 20.0f);
                         j++;
                     }
                 } else {
-                    builder.lineTo(seg.points[j].first, seg.points[j].second);
+                    builder.lineTo(seg.points[j].x / 20.0f, seg.points[j].y / 20.0f);
                     j++;
                 }
             }
@@ -337,19 +333,21 @@ struct PendingPath {
     void buildLinePath(SkPathBuilder& builder) {
         for (auto& seg : segments) {
             if (seg.isEmpty()) continue;
-            builder.moveTo(seg.points[0].first, seg.points[0].second);
+            builder.moveTo(seg.points[0].x / 20.0f, seg.points[0].y / 20.0f);
             int j = 1;
             while (j < (int)seg.points.size()) {
-                if (seg.isBezierControl[j]) {
-                    int cx = seg.points[j].first;
-                    int cy = seg.points[j].second;
+                if (seg.points[j].isBezierControl) {
+                    float cx = seg.points[j].x / 20.0f;
+                    float cy = seg.points[j].y / 20.0f;
                     j++;
                     if (j < (int)seg.points.size()) {
-                        builder.quadTo(cx, cy, seg.points[j].first, seg.points[j].second);
+                        builder.quadTo(cx, cy,
+                                       seg.points[j].x / 20.0f,
+                                       seg.points[j].y / 20.0f);
                         j++;
                     }
                 } else {
-                    builder.lineTo(seg.points[j].first, seg.points[j].second);
+                    builder.lineTo(seg.points[j].x / 20.0f, seg.points[j].y / 20.0f);
                     j++;
                 }
             }
@@ -358,7 +356,7 @@ struct PendingPath {
 };
 
 struct ActivePath {
-    int styleId = 0;
+    int         styleId = 0;
     PathSegment segment;
 
     void reset(int x, int y) {
@@ -372,14 +370,14 @@ struct ActivePath {
     void flushFill(int curX, int curY, std::vector<PendingPath>& pending, bool flip) {
         if (styleId > 0 && styleId <= (int)pending.size() && !segment.isEmpty()) {
             if (flip) segment.flip();
-            pending[styleId - 1].addSegment(segment);
+            pending[styleId - 1].addSegment(std::move(segment));
         }
         segment.reset(curX, curY);
     }
 
     void flushStroke(int curX, int curY, std::vector<PendingPath>& pending) {
         if (styleId > 0 && styleId <= (int)pending.size() && !segment.isEmpty()) {
-            pending[styleId - 1].pushStroke(segment);
+            pending[styleId - 1].pushStroke(std::move(segment));
         }
         segment.reset(curX, curY);
     }
@@ -389,11 +387,11 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
 
     Shape binOut;
 
-    binOut.Width = (shapeBounds.xMax - shapeBounds.xMin) / 20;
+    binOut.Width  = (shapeBounds.xMax - shapeBounds.xMin) / 20;
     binOut.Height = (shapeBounds.yMax - shapeBounds.yMin) / 20;
 
-    std::vector<FILLSTYLE> FillStyles;
-    std::vector<LINESTYLE> LineStyles;
+    std::vector<FILLSTYLE>  FillStyles;
+    std::vector<LINESTYLE>  LineStyles;
     std::vector<LINESTYLE2> LineStyles2;
 
     FillStyles.resize(rawShape.FillStyles.FillStyleCount);
@@ -416,11 +414,11 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
     std::vector<PendingPath> fills(FillStyles.size());
     std::vector<PendingPath> strokes(shapeVersion < 4 ? LineStyles.size() : LineStyles2.size());
 
-    std::vector<SkPath> FillPaths;
-    std::vector<SkPath> LinePaths;
-    std::vector<FILLSTYLE> FillStylesForPaths;
-    std::vector<LINESTYLE> LineStylesForPaths;
-    std::vector<LINESTYLE2> LineStyles2ForPaths;
+    std::vector<SkPath>      FillPaths;
+    std::vector<SkPath>      LinePaths;
+    std::vector<FILLSTYLE>   FillStylesForPaths;
+    std::vector<LINESTYLE>   LineStylesForPaths;
+    std::vector<LINESTYLE2>  LineStyles2ForPaths;
 
     ActivePath fillStyle0;
     ActivePath fillStyle1;
@@ -511,7 +509,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
 
                 fillStyle0.styleId = 0;
                 fillStyle1.styleId = 0;
-                lineStyle.styleId = 0;
+                lineStyle.styleId  = 0;
             }
 
             if (CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.StateFillStyle1) {
@@ -546,7 +544,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
 
                 if (fillStyle1.styleId > 0) fillStyle1.addPoint(penX, penY, false);
                 if (fillStyle0.styleId > 0) fillStyle0.addPoint(penX, penY, false);
-                if (lineStyle.styleId > 0)  lineStyle.addPoint(penX, penY, false);
+                if (lineStyle.styleId  > 0) lineStyle.addPoint(penX, penY, false);
 
             }
 
@@ -554,14 +552,14 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
 
                 int cX = penX + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.ControlDeltaX;
                 int cY = penY + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.ControlDeltaY;
-                int eX = cX + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaX;
-                int eY = cY + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaY;
+                int eX = cX   + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaX;
+                int eY = cY   + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaY;
                 penX = eX;
                 penY = eY;
 
-                if (fillStyle1.styleId > 0) { fillStyle1.addPoint(cX, cY, true);  fillStyle1.addPoint(eX, eY, false); }
-                if (fillStyle0.styleId > 0) { fillStyle0.addPoint(cX, cY, true);  fillStyle0.addPoint(eX, eY, false); }
-                if (lineStyle.styleId > 0)  { lineStyle.addPoint(cX, cY, true);   lineStyle.addPoint(eX, eY, false); }
+                if (fillStyle1.styleId > 0) { fillStyle1.addPoint(cX, cY, true); fillStyle1.addPoint(eX, eY, false); }
+                if (fillStyle0.styleId > 0) { fillStyle0.addPoint(cX, cY, true); fillStyle0.addPoint(eX, eY, false); }
+                if (lineStyle.styleId  > 0) { lineStyle.addPoint(cX, cY, true);  lineStyle.addPoint(eX, eY, false);  }
 
             }
 
@@ -572,68 +570,48 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
     flushLayer();
 
     binOut.FillPaths = FillPaths;
-    binOut.Fills = getSkiaFills(FillStylesForPaths, shapeVersion);
+    binOut.Fills     = getSkiaFills(FillStylesForPaths, shapeVersion);
     binOut.LinePaths = LinePaths;
-    binOut.Lines = getSkiaLines(LineStylesForPaths, LineStyles2ForPaths, shapeVersion);
+    binOut.Lines     = getSkiaLines(LineStylesForPaths, LineStyles2ForPaths, shapeVersion);
+
+    std::vector<SkPath>  FilledLinePaths;
+    std::vector<SkPaint> FilledLinePaints;
+
+    for (int i = 0; i < (int)binOut.LinePaths.size(); i++) {
+        const SkPath&  srcPath  = binOut.LinePaths[i];
+        const SkPaint& srcPaint = binOut.Lines[i];
+        SkPath filledPath = skpathutils::FillPathWithPaint(srcPath, srcPaint);
+        SkPaint fillPaint = srcPaint;
+        fillPaint.setStyle(SkPaint::kFill_Style);
+        FilledLinePaths.push_back(std::move(filledPath));
+        FilledLinePaints.push_back(std::move(fillPaint));
+    }
+
+
+    {
+        SkPictureRecorder recorder;
+        SkRect bounds = SkRect::MakeXYWH(
+            shapeBounds.xMin / 20.0f, shapeBounds.yMin / 20.0f,
+            binOut.Width,             binOut.Height
+        );
+        auto* recCanvas = recorder.beginRecording(bounds);
+        for (int i = 0; i < (int)binOut.FillPaths.size(); i++)
+            recCanvas->drawPath(binOut.FillPaths[i], binOut.Fills[i]);
+        for (int i = 0; i < (int)FilledLinePaths.size(); i++)
+            recCanvas->drawPath(FilledLinePaths[i], FilledLinePaints[i]);
+        binOut.picture = recorder.finishRecordingAsPicture();
+    }
 
     return binOut;
 
 }
 
-Shape transformShape(Shape ShapeIn, MATRIX TransformMatrix, RECT FrameSize) {
-
-    Shape binOut;
-
-    binOut.shapeID = ShapeIn.shapeID;
-    binOut.FillPaths.resize(ShapeIn.FillPaths.size());
-    binOut.LinePaths.resize(ShapeIn.LinePaths.size());
-    binOut.Fills.resize(ShapeIn.Fills.size());
-    binOut.Lines.resize(ShapeIn.Lines.size());
-
-    int FrameX = ((FrameSize.xMax - FrameSize.xMin) / 20);
-    int FrameY = ((FrameSize.yMax - FrameSize.yMin) / 20);
-
-    SkMatrix SkiaTransformMatrix;
-    SkiaTransformMatrix.setAll(
-
-        TransformMatrix.ScaleX / 20, TransformMatrix.RotateSkew1 / 20, TransformMatrix.TranslateX / 20,
-        TransformMatrix.RotateSkew0 / 20, TransformMatrix.ScaleY / 20, TransformMatrix.TranslateY / 20, 
-        0,                           0,                      1
-
+SkMatrix transformShape(Shape& ShapeIn, MATRIX& TransformMatrix) {
+    SkMatrix binOut;
+    binOut.setAll(
+        TransformMatrix.ScaleX,       TransformMatrix.RotateSkew1,    TransformMatrix.TranslateX / 20.0f,
+        TransformMatrix.RotateSkew0,  TransformMatrix.ScaleY,          TransformMatrix.TranslateY / 20.0f,
+        0,                             0,                               1
     );
-
-    // Fills
-
-    for (int i = 0; i < (int)ShapeIn.FillPaths.size(); i++) {
-
-        binOut.FillPaths[i] = ShapeIn.FillPaths[i].makeTransform(SkiaTransformMatrix);
-
-        binOut.Fills[i] = ShapeIn.Fills[i];
-
-        sk_sp<SkShader> shader = sk_ref_sp(ShapeIn.Fills[i].getShader());
-
-        if ( shader ) {
-            binOut.Fills[i].setShader(shader->makeWithLocalMatrix(SkiaTransformMatrix));
-        }
-
-    }
-
-    // Lines
-
-    for (int i = 0; i < (int)ShapeIn.LinePaths.size(); i++) {
-
-        binOut.LinePaths[i] = ShapeIn.LinePaths[i].makeTransform(SkiaTransformMatrix);
-
-        binOut.Lines[i] = ShapeIn.Lines[i];
-
-        sk_sp<SkShader> shader = sk_ref_sp(ShapeIn.Lines[i].getShader());
-
-        if ( shader ) {
-            binOut.Lines[i].setShader(shader->makeWithLocalMatrix(SkiaTransformMatrix));
-        }
-
-    }
-
     return binOut;
-
 }

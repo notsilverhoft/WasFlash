@@ -14,9 +14,9 @@ SHAPEWITHSTYLE getShapeWithStyle(std::vector<uint8_t>& data, int shapeVersion) {
     binOut.LineStyles = getLineStyleArray(data, shapeVersion);
 
     binOut.NumFillBits = ((data[0] >> 4) & 0x0F);
-    std::cout << "DefineShape: Version: " << shapeVersion << ": Shapes: NumFillBits: " << (int)binOut.NumFillBits<<"\n";
+    // std::cout << "DefineShape: Version: " << shapeVersion << ": Shapes: NumFillBits: " << (int)binOut.NumFillBits<<"\n";
     binOut.NumLineBits = (data[0] & 0x0F);
-    std::cout << "DefineShape: Version: " << shapeVersion << ": Shapes: NumLineBits: " << (int)binOut.NumLineBits<<"\n";
+    // std::cout << "DefineShape: Version: " << shapeVersion << ": Shapes: NumLineBits: " << (int)binOut.NumLineBits<<"\n";
     SWFShift(data, 1);
 
     binOut.ShapeRecords = getShapeRecords(data, shapeVersion, binOut.NumFillBits, binOut.NumLineBits);

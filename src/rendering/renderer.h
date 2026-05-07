@@ -10,6 +10,7 @@
 #include <vector>
 #include "../base/rect.h"
 #include "../base/matrix.h"
+#include "../../include/skia/include/core/SkColorFilter.h"
 #include "shapeProcessor.h"
 
 struct setBackground {
@@ -35,6 +36,8 @@ struct drawVideoFrame {
 struct rendererInstruction : setBackground, drawVideoFrame {
     int instructionCode = 0;
     std::shared_ptr<Shape> SWFShape;
+    SkMatrix canvasTransform = SkMatrix::I();
+    sk_sp<SkColorFilter> colorFilter;
 };
 
 void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv);

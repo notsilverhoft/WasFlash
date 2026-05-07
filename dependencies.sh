@@ -70,7 +70,6 @@ fi
             python3 tools/git-sync-deps
             python3 bin/fetch-ninja
             mkdir -p $PWD/out/build
-            cp $PWD/../EMScriptenArgs.gn $PWD/out/build/ars.gn
             bin/gn gen out/build
             ninja -C out/build skia
             mkdir -p $PWD/../include/skia/lib

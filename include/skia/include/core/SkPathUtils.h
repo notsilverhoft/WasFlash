@@ -7,8 +7,8 @@
 #ifndef SkPathUtils_DEFINED
 #define SkPathUtils_DEFINED
 
-#include "include/core/SkScalar.h"  // IWYU pragma: keep
-#include "include/core/SkTypes.h"
+#include "SkScalar.h"  // IWYU pragma: keep
+#include "SkTypes.h"
 
 class SkMatrix;
 class SkPaint;

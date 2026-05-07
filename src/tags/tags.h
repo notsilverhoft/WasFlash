@@ -33,7 +33,7 @@ struct SWFCharacter {
     int code;
     int xPos;
     int yPos;
-    Shape SWFShape;
+    std::shared_ptr<Shape> SWFShape;
 };
 
 // -- Tags -- //

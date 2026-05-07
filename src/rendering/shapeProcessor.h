@@ -11,10 +11,12 @@
 #include <chrono>
 #include "../../include/skia/include/core/SkPaint.h"
 #include "../../include/skia/include/core/SkPathBuilder.h"
+#include "../../include/skia/include/core/SkPicture.h"
 #include "../base/rect.h"
 #include "../base/shapeWithStyle.h"
 #include "../base/shapeRecord.h"
 #include "../base/colorTransformAlpha.h"
+
 
 struct Shape {
     uint16_t shapeID;
@@ -27,6 +29,7 @@ struct Shape {
     std::vector<FILLSTYLE> FillStylesForPaths;
     std::vector<LINESTYLE> LineStylesForPaths;
     std::vector<LINESTYLE2> LineStyles2ForPaths;
+    sk_sp<SkPicture> picture;
 };
 
 struct Edge {
@@ -46,5 +49,5 @@ struct Edge {
 };
 
 Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion);
-Shape transformShape(Shape ShapeIn, MATRIX TransformMatrix, RECT FrameSize);
+SkMatrix transformShape(Shape& ShapeIn, MATRIX& TransformMatrix);
 void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct);

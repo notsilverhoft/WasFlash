@@ -58,22 +58,29 @@ static void renderFrame() {
     std::unique_lock<std::mutex> renderLock(*rs.renderStreamMutex);
     if (rs.renderStream->empty()) return;
 
+    bool hasRenderedBackground = false;
+
     while (!rs.renderStream->empty()) {
 
         rendererInstruction instruction = rs.renderStream->back();
+
+        if (instruction.instructionCode == 1 && hasRenderedBackground) break;
+
         rs.renderStream->pop_back();
         renderLock.unlock();
 
         switch (instruction.instructionCode) {
+
             case 0:
-            break; // uninitialized instruction, ignore
+            break;
+
             case 1:
                 rs.canvas->clear(SkColorSetRGB(instruction.red, instruction.green, instruction.blue));
                 rs.canvas->clipRect(SkRect::MakeWH(
                     (float)rs.surface->width(),
                     (float)rs.surface->height()
                 ));
-                
+                hasRenderedBackground = true;
             break;
 
             case 2: {
@@ -117,14 +124,21 @@ static void renderFrame() {
             break;
 
             case 3:
-                if (!instruction.SWFShape) break;
-                for (int i = 0; i < (int)instruction.SWFShape->FillPaths.size(); i++) {
-                    rs.canvas->drawPath(instruction.SWFShape->FillPaths[i], instruction.SWFShape->Fills[i]);
+                if (!instruction.SWFShape || !instruction.SWFShape->picture) break;
+                rs.canvas->save();
+                rs.canvas->concat(instruction.canvasTransform);
+                if (instruction.colorFilter) {
+                    SkPaint layerPaint;
+                    layerPaint.setColorFilter(instruction.colorFilter);
+                    rs.canvas->saveLayer(nullptr, &layerPaint);
+                    rs.canvas->drawPicture(instruction.SWFShape->picture);
+                    rs.canvas->restore();
+                } else {
+                    rs.canvas->drawPicture(instruction.SWFShape->picture);
                 }
-                for (int i = 0; i < (int)instruction.SWFShape->LinePaths.size(); i++) {
-                    rs.canvas->drawPath(instruction.SWFShape->LinePaths[i], instruction.SWFShape->Lines[i]);
-                }
+                rs.canvas->restore();
             break;
+
         }
 
         renderLock.lock();
@@ -133,6 +147,7 @@ static void renderFrame() {
     renderLock.unlock();
 
     rs.context->flush();
+    rs.context->submit();
 
 #ifndef __EMSCRIPTEN__
     glfwSwapBuffers(rs.window);
@@ -160,6 +175,8 @@ static void initWebGL(void* arg) {
     auto interface = GrGLMakeNativeInterface();
     auto context = GrDirectContexts::MakeGL(interface);
 
+    context->setResourceCacheLimit(256 * 1024 * 1024);
+
     GrGLFramebufferInfo fbInfo;
     fbInfo.fFBOID = 0;
     fbInfo.fFormat = GL_RGBA8;
@@ -181,12 +198,12 @@ static void initWebGL(void* arg) {
 #endif
 
 void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv) {
-    int width = (frameSize.xMax - frameSize.xMin) / 20;
+    int width  = (frameSize.xMax - frameSize.xMin) / 20;
     int height = (frameSize.yMax - frameSize.yMin) / 20;
 
-    gRenderState.renderStream = &renderStream;
+    gRenderState.renderStream      = &renderStream;
     gRenderState.renderStreamMutex = &renderStreamMutex;
-    gRenderState.renderCv = &renderCv;
+    gRenderState.renderCv          = &renderCv;
 
 #ifdef __EMSCRIPTEN__
     int dims[2] = {width, height};
@@ -199,13 +216,16 @@ void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     GLFWwindow* window = glfwCreateWindow(width, height, "Skia", nullptr, nullptr);
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); 
     gRenderState.window = window;
 
     auto interface = GrGLMakeNativeInterface();
-    auto context = GrDirectContexts::MakeGL(interface);
+    auto context   = GrDirectContexts::MakeGL(interface);
+    
+    context->setResourceCacheLimit(256 * 1024 * 1024);
 
     GrGLFramebufferInfo fbInfo;
-    fbInfo.fFBOID = 0;
+    fbInfo.fFBOID  = 0;
     fbInfo.fFormat = GL_RGBA8;
 
     GrBackendRenderTarget target = GrBackendRenderTargets::MakeGL(width, height, 0, 8, fbInfo);
@@ -218,12 +238,13 @@ void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::
 
     gRenderState.context = context;
     gRenderState.surface = surface;
-    gRenderState.canvas = surface->getCanvas();
+    gRenderState.canvas  = surface->getCanvas();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         renderFrame();
     }
+
     glfwDestroyWindow(window);
     glfwTerminate();
 #endif
