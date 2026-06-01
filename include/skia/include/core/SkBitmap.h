@@ -8,18 +8,18 @@
 #ifndef SkBitmap_DEFINED
 #define SkBitmap_DEFINED
 
-#include "SkAlphaType.h"
-#include "SkColor.h"
-#include "SkImageInfo.h"
-#include "SkPixmap.h"
-#include "SkPoint.h"
-#include "SkRect.h"
-#include "SkRefCnt.h"
-#include "SkSamplingOptions.h"
-#include "SkSize.h"
-#include "SkTypes.h"
-#include "../private/base/SkCPUTypes.h"
-#include "../private/base/SkDebug.h"
+#include "include/core/SkAlphaType.h"
+#include "include/core/SkColor.h"
+#include "include/core/SkImageInfo.h"
+#include "include/core/SkPixmap.h"
+#include "include/core/SkPoint.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkRefCnt.h"
+#include "include/core/SkSamplingOptions.h"
+#include "include/core/SkSize.h"
+#include "include/core/SkTypes.h"
+#include "include/private/base/SkCPUTypes.h"
+#include "include/private/base/SkDebug.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -27,7 +27,6 @@
 class SkColorSpace;
 class SkImage;
 class SkMatrix;
-class SkMipmap;
 class SkPaint;
 class SkPixelRef;
 class SkShader;
@@ -1241,13 +1240,8 @@ public:
     };
 
 private:
-    sk_sp<SkPixelRef>   fPixelRef;
-    SkPixmap            fPixmap;
-    sk_sp<SkMipmap>     fMips;
-
-    friend class SkImage_Raster;
-    friend class SkReadBuffer;        // unflatten
-    friend class GrProxyProvider;     // fMips
+    sk_sp<SkPixelRef> fPixelRef;
+    SkPixmap fPixmap;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -8,9 +8,9 @@
 #ifndef SK_USER_CONFIG_WAS_LOADED
 
 // Include this to set reasonable defaults (e.g. for SK_CPU_LENDIAN)
-#include "SkFeatures.h"
+#include "../base/SkFeatures.h"
 // Include this so that users can define the lowest active log priority in their config
-#include "SkLogPriority.h" // IWYU pragma: keep
+#include "../base/SkLogPriority.h" // IWYU pragma: keep
 
 // Allows embedders that want to disable macros that take arguments to just
 // define that symbol to be one of these

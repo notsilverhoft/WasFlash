@@ -1,3 +1,4 @@
+// shapeProcessor.cpp
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -231,12 +232,13 @@ void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct) {
 
 }
 
-
+// Single point — x, y, and bezier flag packed into one struct for cache locality.
 struct Point {
     int  x, y;
     bool isBezierControl;
 };
 
+// A single continuous series of points forming part of a path.
 struct PathSegment {
     std::vector<Point> points;
 
@@ -246,6 +248,9 @@ struct PathSegment {
     }
 
     void addPoint(int x, int y, bool bezierControl) {
+        // Clamp to reasonable SWF coordinate range to prevent Skia from
+        // receiving insane coordinates from parser misalignment.
+        if (x < -1310720 || x > 1310720 || y < -1310720 || y > 1310720) return;
         points.push_back({x, y, bezierControl});
     }
 
@@ -278,7 +283,7 @@ struct PendingPath {
 
             if (startOpen && other.end() == newSeg.start()) {
                 other.points.insert(other.points.end(),
-                newSeg.points.begin() + 1, newSeg.points.end());
+                                    newSeg.points.begin() + 1, newSeg.points.end());
                 newSeg = std::move(segments[i]);
                 std::swap(segments[i], segments.back());
                 segments.pop_back();
@@ -286,7 +291,7 @@ struct PendingPath {
 
             } else if (endOpen && newSeg.end() == other.start()) {
                 newSeg.points.insert(newSeg.points.end(),
-                other.points.begin() + 1, other.points.end());
+                                     other.points.begin() + 1, other.points.end());
                 std::swap(segments[i], segments.back());
                 segments.pop_back();
                 endOpen = false;
@@ -383,9 +388,19 @@ struct ActivePath {
     }
 };
 
-Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
+Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule) {
 
     Shape binOut;
+
+    // Sanity check — corrupt parser data produces huge style counts that cause
+    // bad_alloc and stack smashing. Bail out early if counts are unreasonable.
+    if (rawShape.FillStyles.FillStyleCount > 255 ||
+        rawShape.LineStyles.LineStyleCount > 255) {
+        std::cerr << "getShape: corrupt style counts ("
+                  << (int)rawShape.FillStyles.FillStyleCount << " fills, "
+                  << (int)rawShape.LineStyles.LineStyleCount << " lines), bailing out\n";
+        return binOut;
+    }
 
     binOut.Width  = (shapeBounds.xMax - shapeBounds.xMin) / 20;
     binOut.Height = (shapeBounds.yMax - shapeBounds.yMin) / 20;
@@ -440,7 +455,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
         for (int i = 0; i < (int)fills.size(); i++) {
             if (fills[i].segments.empty()) continue;
             SkPathBuilder builder;
-            builder.setFillType(SkPathFillType::kEvenOdd);
+            builder.setFillType(usesFillWindingRule ? SkPathFillType::kWinding : SkPathFillType::kEvenOdd);
             fills[i].buildFillPath(builder);
             FillPaths.push_back(builder.detach());
             FillStylesForPaths.push_back(FillStyles[i]);
@@ -464,7 +479,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
 
     for (int recordIndex = 0; recordIndex < (int)rawShape.ShapeRecords.size(); recordIndex++) {
 
-        SHAPERECORD& CurrentRecord = rawShape.ShapeRecords[recordIndex];
+        const SHAPERECORD& CurrentRecord = rawShape.ShapeRecords[recordIndex];
 
         if (CurrentRecord.NonEdgeRecords.ISENDRECORD) {
             break;
@@ -574,6 +589,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
     binOut.LinePaths = LinePaths;
     binOut.Lines     = getSkiaLines(LineStylesForPaths, LineStyles2ForPaths, shapeVersion);
 
+    // Pre-tessellate stroke paths into filled paths once at load time.
     std::vector<SkPath>  FilledLinePaths;
     std::vector<SkPaint> FilledLinePaints;
 
@@ -587,7 +603,7 @@ Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion) {
         FilledLinePaints.push_back(std::move(fillPaint));
     }
 
-
+    // Record all draw calls into an SkPicture for cheap per-frame replay.
     {
         SkPictureRecorder recorder;
         SkRect bounds = SkRect::MakeXYWH(

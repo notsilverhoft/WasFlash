@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google Inc.
+ * Copyright 2019 Google LLC
  *
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
@@ -9,9 +9,9 @@
 #define GrImageContext_DEFINED
 
 #include "../../../core/SkRefCnt.h"
-#include "../../base/SingleOwner.h"
-#include "../../base/SkAPI.h"
-#include "GrContext_Base.h"
+#include "../../../private/base/SingleOwner.h"
+#include "../../../private/base/SkAPI.h"
+#include "../../../private/gpu/ganesh/GrContext_Base.h"
 
 class GrContextThreadSafeProxy;
 class GrImageContextPriv;

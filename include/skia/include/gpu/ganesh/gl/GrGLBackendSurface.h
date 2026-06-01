@@ -8,7 +8,7 @@
 #ifndef GrGLBackendSurface_DEFINED
 #define GrGLBackendSurface_DEFINED
 
-#include "GrGLTypes.h"
+#include "../../../gpu/ganesh/gl/GrGLTypes.h"
 #include "../../../private/base/SkAPI.h"
 
 #include <string_view>

@@ -9,10 +9,10 @@
 #define SkYUVAInfo_DEFINED
 
 #include "../codec/SkEncodedOrigin.h"
-#include "SkImageInfo.h"
-#include "SkMatrix.h"
-#include "SkSize.h"
-#include "SkTypes.h"
+#include "../core/SkImageInfo.h"
+#include "../core/SkMatrix.h"
+#include "../core/SkSize.h"
+#include "../core/SkTypes.h"
 
 #include <array>
 #include <cstddef>

@@ -10,8 +10,8 @@
 
 #include "../../core/SkImage.h"
 #include "../../core/SkRefCnt.h"
-#include "../GpuTypes.h"
-#include "GrTypes.h"
+#include "../../gpu/GpuTypes.h"
+#include "../../gpu/ganesh/GrTypes.h"
 #include "../../private/base/SkAPI.h"
 
 #include <functional>

@@ -8,17 +8,17 @@
 #ifndef SkTArray_DEFINED
 #define SkTArray_DEFINED
 
-#include "SkASAN.h"  // IWYU pragma: keep
-#include "SkAlignedStorage.h"
-#include "SkAssert.h"
-#include "SkAttributes.h"
-#include "SkContainers.h"
-#include "SkDebug.h"
-#include "SkMalloc.h"
-#include "SkMath.h"
-#include "SkSpan_impl.h"
-#include "SkTo.h"
-#include "SkTypeTraits.h"  // IWYU pragma: keep
+#include "../base/SkASAN.h"  // IWYU pragma: keep
+#include "../base/SkAlignedStorage.h"
+#include "../base/SkAssert.h"
+#include "../base/SkAttributes.h"
+#include "../base/SkContainers.h"
+#include "../base/SkDebug.h"
+#include "../base/SkMalloc.h"
+#include "../base/SkMath.h"
+#include "../base/SkSpan_impl.h"
+#include "../base/SkTo.h"
+#include "../base/SkTypeTraits.h"  // IWYU pragma: keep
 
 #include <algorithm>
 #include <climits>

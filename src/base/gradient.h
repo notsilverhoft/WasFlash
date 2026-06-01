@@ -4,26 +4,26 @@
 #include <vector>
 
 struct GRADRECORD {
-    uint8_t Ratio;
-    uint8_t Red;
-    uint8_t Green;
-    uint8_t Blue;
+    uint8_t Ratio = 0;
+    uint8_t Red = 0;
+    uint8_t Green = 0;
+    uint8_t Blue = 0;
     uint8_t Alpha = 0;
 };
 
 struct GRADIENT {
-    uint8_t SpreadMode;
-    uint8_t InterpolationMode;
-    uint8_t NumGradients;
-    std::vector<GRADRECORD> GradientRecords;
+    uint8_t SpreadMode = 0;
+    uint8_t InterpolationMode = 0;
+    uint8_t NumGradients = 0;
+    std::vector<GRADRECORD> GradientRecords = {};
 };
 
 struct FOCALGRADIENT {
-    uint8_t SpreadMode;
-    uint8_t InterpolationMode;
-    uint8_t NumGradients;
-    std::vector<GRADRECORD> GradientRecords;
-    float FocalPoint;
+    uint8_t SpreadMode = 0;
+    uint8_t InterpolationMode = 0;
+    uint8_t NumGradients = 0;
+    std::vector<GRADRECORD> GradientRecords {};
+    float FocalPoint = 0;
 };
 
 

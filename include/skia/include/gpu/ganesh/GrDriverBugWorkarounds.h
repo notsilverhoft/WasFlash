@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Google Inc.
+ * Copyright 2018 Google LLC
  *
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
@@ -17,7 +17,7 @@
 // or invoke `bazel run //tools:generate_workarounds`
 // This is not rebuilt by default to avoid embedders having to have extra
 // build steps.
-#include "GrDriverBugWorkaroundsAutogen.h"
+#include "../../gpu/ganesh/GrDriverBugWorkaroundsAutogen.h"
 #endif
 
 #include "../../core/SkTypes.h"

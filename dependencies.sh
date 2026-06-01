@@ -55,8 +55,8 @@ fi
         ### - FFmpeg - ###
 
             cd FFmpeg
-            ./configure --prefix=$PWD/build --disable-shared --enable-static --enable-optimizations --extra-cflags="-march=native -O3" --extra-cxxflags="-march=native -O3" --disable-programs --disable-doc --disable-network
-            make -j($nproc)
+            ./configure --prefix=$PWD/build --disable-shared --enable-static --enable-optimizations --extra-cflags="-march=native -O3 -funroll-loops" --extra-cxxflags="-march=native -O3 -funroll-loops" --disable-programs --disable-doc --disable-network
+            make -j$(nproc)
             make install
             mkdir -p $PWD/../include/FFmpeg/include/
             mkdir -p $PWD/../include/FFmpeg/lib
@@ -70,8 +70,8 @@ fi
             python3 tools/git-sync-deps
             python3 bin/fetch-ninja
             mkdir -p $PWD/out/build
-            bin/gn gen out/build
-            ninja -C out/build skia
+            bin/gn gen out/build --args='is_official_build=true extra_cflags=["-O3", "-march=native", "-funroll-loops"]' # This is assuming you are using optimizations. This will change...
+            ninja -C out/build skia -j$(nproc)
             mkdir -p $PWD/../include/skia/lib
             cp $PWD/out/build/* -r $PWD/../include/skia/lib
             cd ../

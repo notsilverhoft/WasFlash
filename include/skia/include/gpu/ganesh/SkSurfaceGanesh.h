@@ -11,7 +11,7 @@
 #include "../../core/SkImageInfo.h"
 #include "../../core/SkRefCnt.h"
 #include "../../core/SkSurface.h"
-#include "GrTypes.h"
+#include "../../gpu/ganesh/GrTypes.h"
 #include "../../private/base/SkAPI.h"
 
 class GrBackendRenderTarget;

@@ -1,12 +1,12 @@
-// Copyright 2022 Google LLC.
+// Copyright 2022 Google LLC
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SkContainers_DEFINED
 #define SkContainers_DEFINED
 
-#include "SkAPI.h"
-#include "SkAlign.h"
-#include "SkSpan_impl.h"
+#include "../base/SkAPI.h"
+#include "../base/SkAlign.h"
+#include "../base/SkSpan_impl.h"
 
 #include <cstddef>
 #include <cstdint>

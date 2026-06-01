@@ -11,9 +11,9 @@
 #include "../../core/SkData.h"
 #include "../../core/SkString.h"
 #include "../../core/SkTypes.h"
-#include "../ShaderErrorHandler.h"
-#include "GrDriverBugWorkarounds.h"
-#include "GrTypes.h"
+#include "../../gpu/ShaderErrorHandler.h"
+#include "../../gpu/ganesh/GrDriverBugWorkarounds.h"
+#include "../../gpu/ganesh/GrTypes.h"
 #include "../../private/gpu/ganesh/GrTypesPriv.h"
 
 #include <optional>

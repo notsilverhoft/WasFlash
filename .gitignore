@@ -14,14 +14,11 @@
 /include/skia/include/OWNERS
 /include/skia/include/android
 /include/skia/include/docs
-/include/skia/include/effects
-/include/skia/include/encode
 /include/skia/include/pathops
 /include/skia/include/ports
 /include/skia/include/sksl
 /include/skia/include/svg
 /include/skia/include/third_party
-/include/skia/include/utils
 /include/lightspark/lib
 /lightspark
 /HighQualityTest.mp4

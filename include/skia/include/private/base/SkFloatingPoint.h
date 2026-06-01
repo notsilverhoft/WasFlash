@@ -8,8 +8,8 @@
 #ifndef SkFloatingPoint_DEFINED
 #define SkFloatingPoint_DEFINED
 
-#include "SkAttributes.h"
-#include "SkMath.h"
+#include "../base/SkAttributes.h"
+#include "../base/SkMath.h"
 
 #include <cmath>
 #include <cstdint>

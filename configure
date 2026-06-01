@@ -4,7 +4,7 @@ echo "Configuring wasflash..."
 
 # Default compiler
 CXX=${CXX:-g++}
-CXXFLAGS="-std=c++20 -Wall -Wextra -O2"
+CXXFLAGS="-std=c++20 -Wall -Wextra -O3 -march=native -funroll-loops"
 INCLUDE_PATHS="-I./include/FFmpeg/include -I./include/zlib/include -I ./include/skia/include -I ./include/liblzma/include -I ./include/MiniAudio"
 
 # Detect Emscripten

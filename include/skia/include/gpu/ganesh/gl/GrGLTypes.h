@@ -10,8 +10,8 @@
 #define GrGLTypes_DEFINED
 
 #include "../../../core/SkRefCnt.h"
-#include "../../GpuTypes.h"
-#include "GrGLConfig.h"
+#include "../../../gpu/GpuTypes.h"
+#include "../../../gpu/ganesh/gl/GrGLConfig.h"
 
 /**
  * Classifies GL contexts by which standard they implement (currently as OpenGL vs. OpenGL ES).

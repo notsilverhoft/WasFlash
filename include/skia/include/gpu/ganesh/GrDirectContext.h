@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google Inc.
+ * Copyright 2020 Google LLC
  *
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
@@ -11,10 +11,10 @@
 #include "../../core/SkColor.h"
 #include "../../core/SkRefCnt.h"
 #include "../../core/SkTypes.h"
-#include "../GpuTypes.h"
-#include "GrContextOptions.h"
-#include "GrRecordingContext.h"
-#include "GrTypes.h"
+#include "../../gpu/GpuTypes.h"
+#include "../../gpu/ganesh/GrContextOptions.h"
+#include "../../gpu/ganesh/GrRecordingContext.h"
+#include "../../gpu/ganesh/GrTypes.h"
 
 #include <chrono>
 #include <cstddef>

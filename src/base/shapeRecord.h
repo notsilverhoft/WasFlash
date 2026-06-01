@@ -6,16 +6,13 @@
 #include "gradient.h"
 
 struct FILLSTYLE {
-    uint8_t FillStyleType;
-    uint8_t Red;
-    uint8_t Green;
-    uint8_t Blue;
-    uint8_t Alpha;
-    MATRIX GradientMatrix;
-    GRADIENT Gradient;
-    FOCALGRADIENT FocalGradient;
-    uint16_t BitmapID;
-    MATRIX BitmapMatrix;
+    uint8_t FillStyleType = 0;
+    uint8_t Red = 0, Green = 0, Blue = 0, Alpha = 0;
+    MATRIX GradientMatrix = {};
+    GRADIENT Gradient = {};
+    FOCALGRADIENT FocalGradient = {};
+    uint16_t BitmapID = 0;
+    MATRIX BitmapMatrix = {};
 };
 
 struct FILLSTYLEARRAY {

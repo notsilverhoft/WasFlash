@@ -48,6 +48,6 @@ struct Edge {
     int type = 0;
 };
 
-Shape getShape(RECT shapeBounds, SHAPEWITHSTYLE rawShape, int shapeVersion);
+Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule = false);
 SkMatrix transformShape(Shape& ShapeIn, MATRIX& TransformMatrix);
 void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct);

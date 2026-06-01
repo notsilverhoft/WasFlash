@@ -8,11 +8,11 @@
 #ifndef SkImage_DEFINED
 #define SkImage_DEFINED
 
-#include "SkAlphaType.h"
-#include "SkImageInfo.h"
-#include "SkRect.h"
-#include "SkRefCnt.h"
-#include "SkSize.h"
+#include "../core/SkAlphaType.h"
+#include "../core/SkImageInfo.h"
+#include "../core/SkRect.h"
+#include "../core/SkRefCnt.h"
+#include "../core/SkSize.h"
 #include "../private/base/SkAPI.h"
 
 #include <cstddef>

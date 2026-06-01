@@ -9,8 +9,8 @@
 #define GrGLInterface_DEFINED
 
 #include "../../../core/SkRefCnt.h"
-#include "GrGLExtensions.h"
-#include "GrGLFunctions.h"
+#include "../../../gpu/ganesh/gl/GrGLExtensions.h"
+#include "../../../gpu/ganesh/gl/GrGLFunctions.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 

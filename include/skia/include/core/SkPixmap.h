@@ -8,13 +8,13 @@
 #ifndef SkPixmap_DEFINED
 #define SkPixmap_DEFINED
 
-#include "SkColor.h"
-#include "SkColorType.h"
-#include "SkImageInfo.h"
-#include "SkRect.h"
-#include "SkRefCnt.h"
-#include "SkSamplingOptions.h"
-#include "SkSize.h"
+#include "../core/SkColor.h"
+#include "../core/SkColorType.h"
+#include "../core/SkImageInfo.h"
+#include "../core/SkRect.h"
+#include "../core/SkRefCnt.h"
+#include "../core/SkSamplingOptions.h"
+#include "../core/SkSize.h"
 #include "../private/base/SkAPI.h"
 #include "../private/base/SkAssert.h"
 

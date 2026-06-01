@@ -12,7 +12,7 @@
 #include "SkTypes.h"
 #include "../private/base/SkFixed.h"
 #include "../private/base/SkOnce.h"
-#include "../modules/skcms/skcms.h"
+#include "modules/skcms/skcms.h"
 
 #include <cstddef>
 #include <cstdint>

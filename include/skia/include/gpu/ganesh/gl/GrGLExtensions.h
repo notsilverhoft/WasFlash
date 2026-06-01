@@ -9,8 +9,8 @@
 #define GrGLExtensions_DEFINED
 
 #include "../../../core/SkString.h"
-#include "GrGLFunctions.h"
-#include "GrGLTypes.h"
+#include "../../../gpu/ganesh/gl/GrGLFunctions.h"
+#include "../../../gpu/ganesh/gl/GrGLTypes.h"
 #include "../../../private/base/SkAPI.h"
 #include "../../../private/base/SkTArray.h"
 
