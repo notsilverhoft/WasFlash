@@ -45,6 +45,7 @@ struct RenderState {
     SkCanvas* canvas;
     sk_sp<SkSurface> surface;
     std::deque<rendererInstruction> lastBatch;
+    float dpr = 1.0f;
 #ifndef __EMSCRIPTEN__
     GLFWwindow* window;
 #endif
@@ -52,11 +53,19 @@ struct RenderState {
 
 static RenderState gRenderState;
 
+alignas(16) float g_dpr = 1.0f;
+
+extern "C" float* get_dpr_addr() { return &g_dpr; }
+
+
 static void renderFrame() {
     auto& rs = gRenderState;
 
     std::unique_lock<std::mutex> renderLock(*rs.renderStreamMutex);
     if (rs.renderStream->empty()) return;
+
+    rs.canvas->save();
+    if (rs.dpr != 1.0f) rs.canvas->scale(rs.dpr, rs.dpr);
 
     bool hasRenderedBackground = false;
 
@@ -77,8 +86,8 @@ static void renderFrame() {
             case 1:
                 rs.canvas->clear(SkColorSetRGB(instruction.red, instruction.green, instruction.blue));
                 rs.canvas->clipRect(SkRect::MakeWH(
-                    (float)rs.surface->width(),
-                    (float)rs.surface->height()
+                    (float)rs.surface->width()  / rs.dpr,
+                    (float)rs.surface->height() / rs.dpr
                 ));
                 hasRenderedBackground = true;
             break;
@@ -146,6 +155,8 @@ static void renderFrame() {
 
     renderLock.unlock();
 
+    rs.canvas->restore();
+
     rs.context->flush();
     rs.context->submit();
 
@@ -157,17 +168,21 @@ static void renderFrame() {
 #ifdef __EMSCRIPTEN__
 static void initWebGL(void* arg) {
     int* dims = (int*)arg;
-    int width = dims[0];
+    int width  = dims[0];
     int height = dims[1];
 
-    emscripten_set_canvas_element_size("#canvas", width, height);
+    float dpr = g_dpr;
+    int scaledWidth  = (int)(width  * dpr);
+    int scaledHeight = (int)(height * dpr);
+
+    emscripten_set_canvas_element_size("#canvas", scaledWidth, scaledHeight);
 
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
     attrs.majorVersion = 2;
     attrs.minorVersion = 0;
     attrs.stencil = 1;
-    attrs.antialias = 0;
+    attrs.antialias = 1;
     attrs.renderViaOffscreenBackBuffer = 1;
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context("#canvas", &attrs);
     emscripten_webgl_make_context_current(ctx);
@@ -181,7 +196,7 @@ static void initWebGL(void* arg) {
     fbInfo.fFBOID = 0;
     fbInfo.fFormat = GL_RGBA8;
 
-    GrBackendRenderTarget target = GrBackendRenderTargets::MakeGL(width, height, 0, 8, fbInfo);
+    GrBackendRenderTarget target = GrBackendRenderTargets::MakeGL(scaledWidth, scaledHeight, 0, 8, fbInfo);
     auto surface = SkSurfaces::WrapBackendRenderTarget(
         context.get(), target,
         kBottomLeft_GrSurfaceOrigin,
@@ -191,7 +206,8 @@ static void initWebGL(void* arg) {
 
     gRenderState.context = context;
     gRenderState.surface = surface;
-    gRenderState.canvas = surface->getCanvas();
+    gRenderState.canvas  = surface->getCanvas();
+    gRenderState.dpr     = dpr;
 
     emscripten_set_main_loop(renderFrame, 0, 0);
 }
@@ -214,6 +230,7 @@ void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
+    glfwWindowHint(GLFW_SAMPLES, 4);
     GLFWwindow* window = glfwCreateWindow(width, height, "Skia", nullptr, nullptr);
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); 

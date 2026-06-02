@@ -12,6 +12,10 @@
 #include "rendering/renderer.h"
 #include "main.h"
 
+#ifdef __EMSCRIPTEN__
+extern float g_dpr;
+#endif
+
 
 int main(int argc, char* argv[]) {
 
@@ -26,6 +30,16 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> inputFile = readFile(argv[1]);
     
     SWFHeader header = getSWFHeader(inputFile, argv[1]);
+
+    #ifdef __EMSCRIPTEN__
+    if (argc >= 4) {
+        float containerW = std::stof(argv[2]);
+        float containerH = std::stof(argv[3]);
+        float swfW = (header.SWFFrameSize.xMax - header.SWFFrameSize.xMin) / 20.0f;
+        float swfH = (header.SWFFrameSize.yMax - header.SWFFrameSize.yMin) / 20.0f;
+        g_dpr = std::min(containerW / swfW, containerH / swfH);
+    }
+    #endif
 
     std::vector<uint8_t> SWFFile = header.SWFFile; 
     rawSWFTag rawTag;

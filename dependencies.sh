@@ -70,7 +70,7 @@ fi
             python3 tools/git-sync-deps
             python3 bin/fetch-ninja
             mkdir -p $PWD/out/build
-            bin/gn gen out/build --args='is_official_build=true extra_cflags=["-O3", "-march=native", "-funroll-loops"]' # This is assuming you are using optimizations. This will change...
+            bin/gn gen out/build --args='is_official_build=true extra_cflags=["-O3", "-march=native", "-funroll-loops"] extra_cflags_cc=["-O3", "-march=native", "-funroll-loops"]' # This is assuming you are using optimizations. This will change...
             ninja -C out/build skia -j$(nproc)
             mkdir -p $PWD/../include/skia/lib
             cp $PWD/out/build/* -r $PWD/../include/skia/lib
@@ -92,7 +92,7 @@ fi
         ### - FFmpeg - ###
 
             cd FFmpeg
-            emconfigure ./configure --disable-asm --disable-x86asm --cc=emcc --cxx=em++ --ar=emar --enable-cross-compile --target-os=none --arch=x86_32 --disable-programs --disable-doc --disable-network --nm=emnm --ranlib=emranlib --prefix=$PWD/build
+            emconfigure ./configure --disable-asm --disable-x86asm --cc=emcc --cxx=em++ --extra-cflags="-msimd128 -O3 -funroll-loops" --extra-cxxflags="-msimd128 -O3 -funroll-loops" --ar=emar --enable-cross-compile --target-os=none --arch=x86_32 --disable-programs --disable-doc --disable-network --nm=emnm --ranlib=emranlib --prefix=$PWD/build
             emmake make -j$(nproc)
             make install
             mkdir -p $PWD/../include/FFmpeg/include/
@@ -108,7 +108,7 @@ fi
             python3 bin/fetch-ninja
             mkdir -p $PWD/out/build
             cp $PWD/../EMScriptenArgs.gn $PWD/out/build/args.gn
-            bin/gn gen out/build
+            bin/gn gen out/build 
             ninja -C out/build skia -j$(nproc)
             mkdir -p $PWD/../include/skia/lib
             cp $PWD/out/build/* -r $PWD/../include/skia/lib
@@ -116,13 +116,13 @@ fi
             
         ### LZMA
             cd liblzma
-            emconfigure ./configure --disable-shared --enable-static --disable-xz --disable-xzdec --disable-lzmadec --disable-lzmainfo --disable-scripts --host=wasm32-unknown-linux --prefix=$PWD/build
+            emconfigure ./configure --disable-shared --enable-static --disable-xz --disable-xzdec --disable-lzmadec --disable-lzmainfo --disable-scripts --host=wasm32-unknown-linux --prefix=$PWD/build CFLAGS="-msimd128 -O3 -funroll-loops" CXXFLAGS="-msimd128 -O3 -funroll-loops"
             emmake make -j$(nproc)
             make install
             mkdir -p $PWD/../include/liblzma/include/
             mkdir -p $PWD/../include/liblzma/lib
             cp $PWD/build/include/* -r $PWD/../include/liblzma/include/
-            cp $PWD/build/lib/* -r $PWD/../include/liblzma/lib'
+            cp $PWD/build/lib/* -r $PWD/../include/liblzma/lib
             cd ../
 
 ### --- End --- ###

@@ -31,11 +31,12 @@ skia_use_icu = false
 skia_use_harfbuzz = false
 
 skia_enable_skottie = false
-skia_enable_skparagraph = false
+skia_enable_skparagraph = false 
 skia_enable_svg = false
 skia_enable_skshaper = false
 skia_enable_skunicode = false
 skia_enable_pdf = false
 skia_enable_tools = false
-extra_cflags = ["-pthread"]
+extra_cflags = ["-pthread", "-O3", "-msimd128", "-funroll-loops"]
+extra_cflags_cc = ["-O3", "-msimd128", "-funroll-loops"]
 extra_ldflags = ["-pthread"]
