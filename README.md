@@ -12,10 +12,10 @@ A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), d
 - [ ] Full support without ActionScript
     - [ ] Gradient Support - Almost Done(Tied to Defineshape4)...
     - [ ] DefineShape 4 Support
-        - [ ] Parse tag
-        - [ ] Do a little reworking of the shape processor to work with new flags.
-        - [ ] Add to tag pipeline
-        - [ ] Ensure rendering can handle new flags
+        - [x] Parse tag
+        - [x] Do a little reworking of the shape processor to work with new flags.
+        - [x] Add to tag pipeline
+        - [x] Ensure rendering can handle new flags
     - [ ] Bitmap Support
         - [ ] DefineBits
         - [ ] JPEGTables
