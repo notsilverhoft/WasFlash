@@ -179,6 +179,9 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
         case 72:
             getDoABCTag(rawTag);
         break;
+
+        case 83:
+            binOut = getDefineShapeTag(rawTag, 4);
     }
 
     binOut.tagCode = rawTag.tagCode;
@@ -480,6 +483,15 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 if ((int)tag.FileAttributes.reserved5 != 0) throwErr(691);
                 processedTags[(0 - tag.tagCode)] = tag;
             break;
+
+
+            case 83: // DefineShape4
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 4, tag.DefineShape.DefineShape4.UsesFillWindingRule))};
+                processedTags[tag.DefineShape.ShapeID] = tag;
+                retroactiveUpdate(tag.DefineShape.ShapeID);
+                nextFrame = std::chrono::steady_clock::now();
+            break;
+
         }
     }
 }

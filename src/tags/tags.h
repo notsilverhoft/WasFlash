@@ -46,7 +46,18 @@ struct SWFTag {
 
         uint16_t ShapeID;
         RECT ShapeBounds;
+        struct {
+            
+            RECT EdgeBounds;
+            uint8_t Reserved;
+            bool UsesFillWindingRule;
+            bool UsesNonScalingStrokes;
+            bool UsesScalingStrokes;
+        
+        } DefineShape4;
+
         SHAPEWITHSTYLE Shapes;
+
 
     } DefineShape;
 
