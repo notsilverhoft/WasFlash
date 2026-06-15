@@ -23,7 +23,10 @@ fi
 
     ### -- Skia -- ###
 
-        git clone https://skia.googlesource.com/skia.git
+        git clone https://skia.googlesource.com/skia.git  
+        cd skia
+        git checkout cecc0e0da9ae2f06ea1e382234a69ad42408fd88
+        cd ../
 
     ### -- ZLIB -- ###
 

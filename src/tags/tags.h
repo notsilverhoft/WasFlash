@@ -14,8 +14,10 @@
 #include "SWFTags/PlaceObject2.h"
 #include "SWFTags/AVM/AVM2/doABC.h"
 #include "../base/matrix.h"
+#include "../base/shape.h"
 #include "../base/colorTransformAlpha.h"
 #include "../base/shapeWithStyle.h"
+#include "../base/morphShapeRecord.h"
 #include "../header/header.h"
 #include "../rendering/renderer.h"
 
@@ -34,6 +36,7 @@ struct SWFCharacter {
     int xPos;
     int yPos;
     std::shared_ptr<Shape> SWFShape;
+    std::shared_ptr<std::pair<Shape, Shape>> SWFMorphShape;
 };
 
 // -- Tags -- //
@@ -134,6 +137,26 @@ struct SWFTag {
         int16_t LatencySeek = 0;
 
     } SoundStreamHead2;
+
+    // Tag #46 + 84 - DefineMorphShape
+
+    struct SWFDefineMorphShapeTag {
+        uint16_t CharacterId;
+        RECT StartBounds;
+        RECT EndBounds;
+        struct {
+            RECT StartEdgeBounds;
+            RECT EndEdgeBounds;
+            uint8_t Reserved;
+            bool UsesNonScalingStrokes;
+            bool UsesScalingStrokes;
+        } DefineMorphShape2;
+        uint32_t Offset;
+        MORPHFILLSTYLEARRAY MorphFillStyles;
+        MORPHLINESTYLEARRAY MorphLineStyles;
+        SHAPE StartEdges;
+        SHAPE EndEdges;
+    } DefineMorphShape;
 
     // Tag #60 - DefineVideoStream
 

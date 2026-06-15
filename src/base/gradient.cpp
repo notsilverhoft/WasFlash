@@ -82,3 +82,53 @@ FOCALGRADIENT getFocalGradient(std::vector<uint8_t>& data, int shapeVersion) {
     return binOut;
 
 }
+
+MORPHGRADRECORD getMorphGradientRecord(std::vector<uint8_t>& data) {
+
+    MORPHGRADRECORD binOut;
+
+    binOut.StartRatio = data[0];
+    binOut.StartColorRed = data[1];
+    binOut.StartColorGreen = data[2];
+    binOut.StartColorBlue = data[3];
+    binOut.StartColorAlpha = data[4];
+    binOut.EndRatio = data[5];
+    binOut.EndColorRed = data[6];
+    binOut.EndColorGreen = data[7];
+    binOut.EndColorBlue = data[8];
+    binOut.EndColorAlpha = data[9];
+    // std::cout << "MorphGradientRecord: StartRatio:" << (int)binOut.StartRatio << "\n";
+    // std::cout << "MorphGradientRecord: StartColorRed:" << (int)binOut.StartColorRed << "\n";
+    // std::cout << "MorphGradientRecord: StartColorGreen:" << (int)binOut.StartColorGreen << "\n";
+    // std::cout << "MorphGradientRecord: StartColorBlue:" << (int)binOut.StartColorBlue << "\n";
+    // std::cout << "MorphGradientRecord: StartColorAlpha:" << (int)binOut.StartColorAlpha << "\n";
+    // std::cout << "MorphGradientRecord: EndRatio:" << (int)binOut.EndRatio << "\n";
+    // std::cout << "MorphGradientRecord: EndColorRed:" << (int)binOut.EndColorRed << "\n";
+    // std::cout << "MorphGradientRecord: EndColorGreen:" << (int)binOut.EndColorGreen << "\n";
+    // std::cout << "MorphGradientRecord: EndColorBlue:" << (int)binOut.EndColorBlue << "\n";
+    // std::cout << "MorphGradientRecord: EndColorAlpha:" << (int)binOut.EndColorAlpha << "\n";
+    SWFShift(data, 10);
+
+    return binOut;
+
+}
+
+MORPHGRADIENT getMorphGradient(std::vector<uint8_t>& data) {
+
+    MORPHGRADIENT binOut;
+
+    binOut.NumGradients = data[0];
+    // std::cout << "MorphGradient: NumGradients: " << (int)binOut.NumGradients << "\n";
+    SWFShift(data, 1);
+
+    binOut.GradientRecords.resize(binOut.NumGradients);
+
+    for (int i = 0; i < (int)binOut.NumGradients; i++) {
+        
+        binOut.GradientRecords[i] = getMorphGradientRecord(data);
+
+    }
+
+    return binOut;
+    
+}

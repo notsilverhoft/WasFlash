@@ -1,3 +1,4 @@
+// shapeProcessor.cpp
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -19,6 +20,7 @@
 #include "../../include/skia/include/core/SkPathUtils.h"
 #include "../base/rect.h"
 #include "../base/shapeWithStyle.h"
+#include "../base/shape.h"
 #include "../base/shapeRecord.h"
 #include "../base/colorTransformAlpha.h"
 
@@ -137,7 +139,7 @@ std::vector<SkPaint> getSkiaFills(const std::vector<FILLSTYLE>& rawFills, int sh
             }
 
         }
-        // Bitmap fills
+        // Bitmap fills (0x40-0x43): not yet renderable — bitmap tags not parsed yet.
 
     }
 
@@ -258,7 +260,6 @@ struct PathSegment {
     }
 
     void addPoint(int x, int y, bool bezierControl) {
-        if (x < -1310720 || x > 1310720 || y < -1310720 || y > 1310720) return;
         points.push_back({x, y, bezierControl});
     }
 
@@ -333,6 +334,8 @@ struct PendingPath {
         }
     }
 
+    // noClose mirrors LINESTYLE2.NoClose — suppresses closing even on geometrically
+    // closed segments. A segment is only closed if start==end AND !noClose (matching Ruffle).
     void buildLinePath(SkPathBuilder& builder, bool noClose = false) {
         for (auto& seg : segments) {
             if (seg.isEmpty()) continue;
@@ -368,10 +371,11 @@ struct ActivePath {
     void reset(int x, int y) { segment.reset(x, y); }
     void addPoint(int x, int y, bool bezierControl) { segment.addPoint(x, y, bezierControl); }
 
-    void flushFill(int curX, int curY, std::vector<PendingPath>& pending, bool flip) {
+    void flushFill(int curX, int curY, std::vector<PendingPath>& pending, bool flip, bool stitch = true) {
         if (styleId > 0 && styleId <= (int)pending.size() && !segment.isEmpty()) {
             if (flip) segment.flip();
-            pending[styleId - 1].addSegment(std::move(segment));
+            if (stitch) pending[styleId - 1].addSegment(std::move(segment));
+            else        pending[styleId - 1].pushStroke(std::move(segment));
         }
         segment.reset(curX, curY);
     }
@@ -426,8 +430,6 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
 
     int penX = 0;
     int penY = 0;
-
-    
 
     SkPictureRecorder recorder;
     SkRect picBounds = SkRect::MakeXYWH(
@@ -606,6 +608,147 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
     flushLayer();
 
     binOut.picture = recorder.finishRecordingAsPicture();
+
+    return binOut;
+}
+
+Shape getShape(RECT shapeBounds, const SHAPE& rawShape,
+               int version,
+               const std::vector<FILLSTYLE>& inFillStyles,
+               const std::vector<LINESTYLE>& inLineStyles,
+               const std::vector<LINESTYLE2>& inLineStyles2) {
+
+    Shape binOut;
+
+    binOut.Width  = (shapeBounds.xMax - shapeBounds.xMin) / 20;
+    binOut.Height = (shapeBounds.yMax - shapeBounds.yMin) / 20;
+
+    std::vector<FILLSTYLE>  FillStyles  = inFillStyles;
+    std::vector<LINESTYLE>  LineStyles  = inLineStyles;
+    std::vector<LINESTYLE2> LineStyles2 = inLineStyles2;
+
+    std::vector<PendingPath> fills(FillStyles.size());
+    std::vector<PendingPath> strokes(version < 2 ? LineStyles.size() : LineStyles2.size());
+
+    ActivePath fillStyle0;
+    ActivePath fillStyle1;
+    ActivePath lineStyle;
+
+    int penX = 0;
+    int penY = 0;
+
+    auto flushPaths = [&]() {
+        fillStyle1.flushFill(penX, penY, fills, false, false);
+        fillStyle0.flushFill(penX, penY, fills, true,  false);
+        lineStyle.flushStroke(penX, penY, strokes);
+    };
+
+    auto flushLayer = [&]() {
+
+        flushPaths();
+
+        std::vector<FILLSTYLE> layerFillStyles;
+
+        for (int i = 0; i < (int)fills.size(); i++) {
+            if (fills[i].segments.empty()) continue;
+            SkPathBuilder builder;
+            builder.setFillType(SkPathFillType::kEvenOdd);
+            fills[i].buildFillPath(builder);
+            binOut.FillPaths.push_back(builder.detach());
+            layerFillStyles.push_back(FillStyles[i]);
+            fills[i].segments.clear();
+        }
+
+        auto layerFillPaints = getSkiaFills(layerFillStyles, 3);
+        for (auto& p : layerFillPaints) binOut.Fills.push_back(p);
+
+        std::vector<LINESTYLE>  layerLineStyles;
+        std::vector<LINESTYLE2> layerLineStyles2;
+
+        for (int i = 0; i < (int)strokes.size(); i++) {
+            if (strokes[i].segments.empty()) continue;
+            SkPathBuilder builder;
+            bool noClose = (version >= 2 && i < (int)LineStyles2.size())
+                              ? LineStyles2[i].NoClose : false;
+            strokes[i].buildLinePath(builder, noClose);
+            binOut.LinePaths.push_back(builder.detach());
+            if (version < 2) layerLineStyles.push_back(LineStyles[i]);
+            else             layerLineStyles2.push_back(LineStyles2[i]);
+            strokes[i].segments.clear();
+        }
+
+        auto layerStrokePaints = getSkiaLines(layerLineStyles, layerLineStyles2, version < 2 ? 3 : 4);
+        for (auto& p : layerStrokePaints) binOut.Lines.push_back(p);
+    };
+
+    for (int recordIndex = 0; recordIndex < (int)rawShape.ShapeRecords.size(); recordIndex++) {
+
+        const SHAPERECORD& CurrentRecord = rawShape.ShapeRecords[recordIndex];
+
+        if (CurrentRecord.NonEdgeRecords.ISENDRECORD) break;
+
+        if (CurrentRecord.TypeFlag == 0) {
+
+            if (CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.StateMoveTo) {
+                flushPaths();
+                penX = CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.MoveDeltaX;
+                penY = CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.MoveDeltaY;
+                fillStyle0.reset(penX, penY);
+                fillStyle1.reset(penX, penY);
+                lineStyle.reset(penX, penY);
+            }
+
+            if (CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.StateFillStyle1) {
+                fillStyle1.flushFill(penX, penY, fills, false);
+                fillStyle1.styleId = CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.FillStyle1;
+            }
+
+            if (CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.StateFillStyle0) {
+                fillStyle0.flushFill(penX, penY, fills, true);
+                fillStyle0.styleId = CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.FillStyle0;
+            }
+
+            if (CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.StateLineStyle) {
+                lineStyle.flushStroke(penX, penY, strokes);
+                lineStyle.styleId = CurrentRecord.NonEdgeRecords.STYLECHANGERECORD.LineStyle;
+            }
+        }
+
+        if (CurrentRecord.TypeFlag == 1) {
+
+            if (CurrentRecord.EdgeRecords.StraightFlag) {
+
+                if (CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.GeneralLineFlag) {
+                    penX += CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.GeneralLineDeltaX;
+                    penY += CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.GeneralLineDeltaY;
+                } else if (!CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.VertLineFlag) {
+                    penX += CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.LineDeltaX;
+                } else {
+                    penY += CurrentRecord.EdgeRecords.STRAIGHTEDGERECORD.LineDeltaY;
+                }
+
+                if (fillStyle1.styleId > 0) fillStyle1.addPoint(penX, penY, false);
+                if (fillStyle0.styleId > 0) fillStyle0.addPoint(penX, penY, false);
+                if (lineStyle.styleId  > 0) lineStyle.addPoint(penX, penY, false);
+            }
+
+            if (!CurrentRecord.EdgeRecords.StraightFlag) {
+
+                int cX = penX + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.ControlDeltaX;
+                int cY = penY + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.ControlDeltaY;
+                int eX = cX   + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaX;
+                int eY = cY   + CurrentRecord.EdgeRecords.CURVEDEDGERECORD.AnchorDeltaY;
+                penX = eX;
+                penY = eY;
+
+                if (fillStyle1.styleId > 0) { fillStyle1.addPoint(cX, cY, true); fillStyle1.addPoint(eX, eY, false); }
+                if (fillStyle0.styleId > 0) { fillStyle0.addPoint(cX, cY, true); fillStyle0.addPoint(eX, eY, false); }
+                if (lineStyle.styleId  > 0) { lineStyle.addPoint(cX, cY, true);  lineStyle.addPoint(eX, eY, false);  }
+            }
+        }
+    }
+
+    flushLayer();
 
     return binOut;
 }

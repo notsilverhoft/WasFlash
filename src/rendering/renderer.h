@@ -36,6 +36,8 @@ struct drawVideoFrame {
 struct rendererInstruction : setBackground, drawVideoFrame {
     int instructionCode = 0;
     std::shared_ptr<Shape> SWFShape;
+    std::shared_ptr<std::pair<Shape, Shape>> SWFMorphShapes;
+    std::shared_ptr<Shape> SWFMorphFrame;
     SkMatrix canvasTransform = SkMatrix::I();
     sk_sp<SkColorFilter> colorFilter;
 };

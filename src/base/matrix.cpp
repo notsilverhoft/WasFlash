@@ -33,8 +33,8 @@ MATRIX getMatrix(std::vector<uint8_t>& data) {
 
         binOut.nScaleBits = bs.readUnsigned(5);
 
-        binOut.ScaleX = static_cast<float>(bs.readUnsigned(binOut.nScaleBits) / 65536.0f);
-        binOut.ScaleY = static_cast<float>(bs.readUnsigned(binOut.nScaleBits) / 65536.0f);
+        binOut.ScaleX = static_cast<float>(bs.readSigned(binOut.nScaleBits) / 65536.0f);
+        binOut.ScaleY = static_cast<float>(bs.readSigned(binOut.nScaleBits) / 65536.0f);
     
         totalBits += (5 + (2 * binOut.nScaleBits));
 
@@ -55,8 +55,8 @@ MATRIX getMatrix(std::vector<uint8_t>& data) {
 
         binOut.nRotateBits = bs.readUnsigned(5);
 
-        binOut.RotateSkew0 = static_cast<float>(bs.readUnsigned(binOut.nRotateBits) / 65536.0f);
-        binOut.RotateSkew1 = static_cast<float>(bs.readUnsigned(binOut.nRotateBits) / 65536.0f);
+        binOut.RotateSkew0 = static_cast<float>(bs.readSigned(binOut.nRotateBits) / 65536.0f);
+        binOut.RotateSkew1 = static_cast<float>(bs.readSigned(binOut.nRotateBits) / 65536.0f);
     
         totalBits += (5 + (2 * binOut.nRotateBits));
 

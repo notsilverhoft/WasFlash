@@ -18,6 +18,7 @@
 #include "SWFTags/SoundStreamHead.h"
 #include "SWFTags/SoundStreamBlock.h"
 #include "SWFTags/DefineShape.h"
+#include "SWFTags/DefineMorphShape.h"
 #include "../utils/errcodes.h"
 #include "../utils/trackSWF.h"
 #include "../header/header.h"
@@ -26,6 +27,7 @@
 #include "../rendering/videoProcessor.h"
 #include "../rendering/audioProcessor.h"
 #include "../rendering/shapeProcessor.h"
+#include "../rendering/morphShapeProcessor.h"
 #include "../base/colorTransformAlpha.h"
 #include "SWFTags/AVM/AVM2/doABC.h"
 #include "../../include/skia/include/core/SkColorFilter.h"
@@ -124,6 +126,12 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
     SWFTag binOut;
     binOut.tagCode = rawTag.tagCode;
 
+    if ( binOut.tagCode != 1 & binOut.tagCode != 2 & binOut.tagCode != 4 & binOut.tagCode != 9 & binOut.tagCode != 18 & binOut.tagCode != 19 & binOut.tagCode != 22 & binOut.tagCode != 26 & binOut.tagCode != 28 & binOut.tagCode != 32 & binOut.tagCode != 45 & binOut.tagCode != 46 & binOut.tagCode != 60 & binOut.tagCode != 61 & binOut.tagCode != 69 & binOut.tagCode != 83 & binOut.tagCode != 84 ) {
+
+        std::cout << "Tag Code: " << binOut.tagCode << "\n";
+
+    }
+
     switch (rawTag.tagCode) {
 
         case 2:
@@ -164,6 +172,10 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
             binOut = getSoundStreamHeadTag(rawTag);
         break;
 
+        case 46:
+            binOut = getDefineMorphShapeTag(rawTag, 1);
+        break;
+
         case 60:
             binOut = getDefineVideoStreamTag(rawTag);
         break;
@@ -182,6 +194,11 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
 
         case 83:
             binOut = getDefineShapeTag(rawTag, 4);
+        break;
+
+        case 84:
+            binOut = getDefineMorphShapeTag(rawTag, 2);
+        break;
     }
 
     binOut.tagCode = rawTag.tagCode;
@@ -193,6 +210,7 @@ struct DisplayListEntry {
     MATRIX   matrix;
     CXFORMWITHALPHA colorTransform;
     bool hasColorTransform = false;
+    uint16_t ratio = 0;
 };
 
 sk_sp<SkColorFilter> buildColorFilter(const CXFORMWITHALPHA& ct) {
@@ -230,7 +248,7 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
     auto nextFrame = std::chrono::steady_clock::now();
 
-    auto buildInstruction = [&](uint16_t characterID, MATRIX matrix, bool hasColorTransform = false, CXFORMWITHALPHA colorTransform = {}) -> rendererInstruction {
+    auto buildInstruction = [&](uint16_t characterID, MATRIX matrix, bool hasColorTransform = false, CXFORMWITHALPHA colorTransform = {}, uint16_t ratio = 0) -> rendererInstruction {
 
         rendererInstruction instruction;
 
@@ -254,6 +272,23 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             }
             break;
 
+            case 46:
+            case 84:
+            {
+                instruction.instructionCode = 4;
+                instruction.SWFMorphShapes = savedCharacters.at(characterID).SWFMorphShape;
+
+                Shape frame = getMorphFrame(*instruction.SWFMorphShapes, ratio);
+
+                if (hasColorTransform) {
+                    applyColorTransform(frame, colorTransform);
+                }
+
+                instruction.SWFMorphFrame = std::make_shared<Shape>(std::move(frame));
+                instruction.canvasTransform = transformMorphShape(*instruction.SWFMorphShapes, matrix);
+            }
+            break;
+
         }
 
         return instruction;
@@ -261,8 +296,18 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
     };
 
     auto updateTransform = [&](uint16_t depth, MATRIX matrix) {
-        if (displayList.find(depth) != displayList.end() && displayList[depth].SWFShape) {
-            displayList[depth].canvasTransform = transformShape(*displayList[depth].SWFShape, matrix);
+        if (displayList.find(depth) == displayList.end()) return;
+        // Don't apply transforms intended for unrecognized characters (e.g. sprites)
+        // to whatever shape is currently sitting at this depth
+        if (displayListEntries.find(depth) != displayListEntries.end()) {
+            uint16_t charID = displayListEntries.at(depth).characterID;
+            if (processedTags.find((int16_t)charID) == processedTags.end()) return;
+        }
+        rendererInstruction& instr = displayList[depth];
+        if (instr.instructionCode == 3 && instr.SWFShape) {
+            instr.canvasTransform = transformShape(*instr.SWFShape, matrix);
+        } else if (instr.instructionCode == 4 && instr.SWFMorphShapes) {
+            instr.canvasTransform = transformMorphShape(*instr.SWFMorphShapes, matrix);
         }
     };
 
@@ -270,7 +315,7 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
         for (auto& [depth, entry] : displayListEntries) {
             if (entry.characterID == shapeID) {
                 displayList[depth] = buildInstruction(entry.characterID, entry.matrix,
-                    entry.hasColorTransform, entry.colorTransform);
+                    entry.hasColorTransform, entry.colorTransform, entry.ratio);
             }
         }
     };
@@ -289,16 +334,21 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
             case 1: // ShowFrame
             {
-                if (hasBackground)
-                    pushRendererInstruction(backgroundInstruction, renderStream, renderStreamMutex, renderCv);
+                {
+                    std::lock_guard<std::mutex> renderLock(renderStreamMutex);
 
-                for (auto& [depth, instr] : displayList) {
-                    pushRendererInstruction(instr, renderStream, renderStreamMutex, renderCv);
-                }
+                    if (hasBackground)
+                        renderStream.push_front(backgroundInstruction);
 
-                while (!queuedRenderingInstructions.empty()) {
-                    pushRendererInstruction(queuedRenderingInstructions.back(), renderStream, renderStreamMutex, renderCv);
-                    queuedRenderingInstructions.pop_back();
+                    for (auto& [depth, instr] : displayList)
+                        renderStream.push_front(instr);
+
+                    while (!queuedRenderingInstructions.empty()) {
+                        renderStream.push_front(queuedRenderingInstructions.back());
+                        queuedRenderingInstructions.pop_back();
+                    }
+
+                    renderCv.notify_one();
                 }
 
                 while (!queuedAudioFrames.empty()) {
@@ -360,12 +410,14 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
                     uint16_t characterID = tag.PlaceObject2.CharacterID;
                     MATRIX matrix = tag.PlaceObject2.Matrix;
+                    uint16_t ratio = tag.PlaceObject2.Ratio;
 
                     displayListEntries[depth] = {
                         characterID,
                         matrix,
                         tag.PlaceObject2.ColorTransform,
-                        tag.PlaceObject2.PlaceFlagHasColorTransform
+                        tag.PlaceObject2.PlaceFlagHasColorTransform,
+                        ratio
                     };
 
                     if (processedTags.find((int16_t)characterID) != processedTags.end()) {
@@ -377,12 +429,13 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                             savedCharacters[characterID].yPos = (oldX * matrix.RotateSkew0 + oldY * matrix.ScaleY  + matrix.TranslateY) / 20.0f;
                         }
                         else if (tag.PlaceObject2.PlaceFlagHasClipDepth) {
-                            displayListEntries[depth] = {characterID, matrix, {}, false};
+                            displayListEntries[depth] = {characterID, matrix, {}, false, ratio};
                         }
                         else if (savedCharacters.find(characterID) != savedCharacters.end()) {
                             displayList[depth] = buildInstruction(characterID, matrix,
                                 tag.PlaceObject2.PlaceFlagHasColorTransform,
-                                tag.PlaceObject2.ColorTransform);
+                                tag.PlaceObject2.ColorTransform,
+                                ratio);
                         }
                     }
 
@@ -392,18 +445,32 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
                         DisplayListEntry& entry = displayListEntries[depth];
 
+                        // Update all changed fields first — multiple flags can be set simultaneously
+                        if (tag.PlaceObject2.PlaceFlagHasMatrix) {
+                            entry.matrix = tag.PlaceObject2.Matrix;
+                        }
                         if (tag.PlaceObject2.PlaceFlagHasColorTransform) {
                             entry.colorTransform = tag.PlaceObject2.ColorTransform;
                             entry.hasColorTransform = true;
+                        }
+                        if (tag.PlaceObject2.PlaceFlagHasRatio) {
+                            entry.ratio = tag.PlaceObject2.Ratio;
+                        }
+
+                        // Rebuild instruction if ratio or color transform changed (matrix is baked in),
+                        // otherwise just update the canvas transform
+                        bool needsRebuild = tag.PlaceObject2.PlaceFlagHasRatio ||
+                                            tag.PlaceObject2.PlaceFlagHasColorTransform;
+
+                        if (needsRebuild) {
                             if (processedTags.find((int16_t)entry.characterID) != processedTags.end()) {
                                 int tagCode = processedTags.at((int16_t)entry.characterID).tagCode;
                                 if (tagCode != 60 && savedCharacters.find(entry.characterID) != savedCharacters.end()) {
                                     displayList[depth] = buildInstruction(entry.characterID, entry.matrix,
-                                        entry.hasColorTransform, entry.colorTransform);
+                                        entry.hasColorTransform, entry.colorTransform, entry.ratio);
                                 }
                             }
                         } else if (tag.PlaceObject2.PlaceFlagHasMatrix) {
-                            entry.matrix = tag.PlaceObject2.Matrix;
                             updateTransform(depth, entry.matrix);
                         }
 
@@ -436,6 +503,16 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 initializeAudioDecoder(tag.SoundStreamHead2.StreamSoundCompression, tag.SoundStreamHead2.StreamSoundRate, tag.SoundStreamHead2.StreamSoundSize, tag.SoundStreamHead2.StreamSoundType, tag.SoundStreamHead2.LatencySeek);
                 initializeAudioPlayer(tag.SoundStreamHead2.StreamSoundRate, tag.SoundStreamHead2.StreamSoundType, tag.SoundStreamHead2.StreamSoundSize, tag.SoundStreamHead2.StreamSoundCompression);
                 processedTags[(0 - tag.tagCode)] = tag;
+            break;
+
+            case 46: // DefineMorphShape
+            {
+                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 1));
+                savedCharacters[tag.DefineMorphShape.CharacterId] = {46, 0, 0, nullptr, morphShapes};
+                processedTags[tag.DefineMorphShape.CharacterId] = tag;
+                retroactiveUpdate(tag.DefineMorphShape.CharacterId);
+                nextFrame = std::chrono::steady_clock::now();
+            }
             break;
 
             case 60: // DefineVideoStream
@@ -484,12 +561,21 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 processedTags[(0 - tag.tagCode)] = tag;
             break;
 
-
             case 83: // DefineShape4
                 savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 4, tag.DefineShape.DefineShape4.UsesFillWindingRule))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
                 nextFrame = std::chrono::steady_clock::now();
+            break;
+
+            case 84: // DefineMorphShape2
+            {
+                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 2));
+                savedCharacters[tag.DefineMorphShape.CharacterId] = {84, 0, 0, nullptr, morphShapes};
+                processedTags[tag.DefineMorphShape.CharacterId] = tag;
+                retroactiveUpdate(tag.DefineMorphShape.CharacterId);
+                nextFrame = std::chrono::steady_clock::now();
+            }
             break;
 
         }

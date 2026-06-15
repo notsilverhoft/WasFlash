@@ -148,6 +148,33 @@ static void renderFrame() {
                 rs.canvas->restore();
             break;
 
+            case 4:
+            {
+                if (!instruction.SWFMorphFrame) break;
+                const Shape& frame = *instruction.SWFMorphFrame;
+
+                rs.canvas->save();
+                rs.canvas->concat(instruction.canvasTransform);
+
+                if (instruction.colorFilter) {
+                    SkPaint layerPaint;
+                    layerPaint.setColorFilter(instruction.colorFilter);
+                    rs.canvas->saveLayer(nullptr, &layerPaint);
+                }
+
+                for (int i = 0; i < (int)frame.FillPaths.size(); i++)
+                    rs.canvas->drawPath(frame.FillPaths[i], frame.Fills[i]);
+
+                for (int i = 0; i < (int)frame.LinePaths.size(); i++)
+                    rs.canvas->drawPath(frame.LinePaths[i], frame.Lines[i]);
+
+                if (instruction.colorFilter)
+                    rs.canvas->restore();
+
+                rs.canvas->restore();
+            }
+            break;
+
         }
 
         renderLock.lock();
@@ -233,12 +260,12 @@ void render(RECT frameSize, std::deque<rendererInstruction>& renderStream, std::
     glfwWindowHint(GLFW_SAMPLES, 4);
     GLFWwindow* window = glfwCreateWindow(width, height, "Skia", nullptr, nullptr);
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); 
+    glfwSwapInterval(1);
     gRenderState.window = window;
 
     auto interface = GrGLMakeNativeInterface();
     auto context   = GrDirectContexts::MakeGL(interface);
-    
+
     context->setResourceCacheLimit(256 * 1024 * 1024);
 
     GrGLFramebufferInfo fbInfo;

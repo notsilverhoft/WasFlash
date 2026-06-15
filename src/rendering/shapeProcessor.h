@@ -15,6 +15,7 @@
 #include "../base/rect.h"
 #include "../base/shapeWithStyle.h"
 #include "../base/shapeRecord.h"
+#include "../base/shape.h"
 #include "../base/colorTransformAlpha.h"
 
 
@@ -49,5 +50,6 @@ struct Edge {
 };
 
 Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule = false);
-SkMatrix transformShape(Shape& ShapeIn, MATRIX& TransformMatrix);
+Shape getShape(RECT shapeBounds, const SHAPE& rawShape, int version, const std::vector<FILLSTYLE>& inFillStyles, const std::vector<LINESTYLE>& inLineStyles, const std::vector<LINESTYLE2>& inLineStyles2);
 void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct);
+SkMatrix transformShape(Shape&, MATRIX& TransformMatrix);
