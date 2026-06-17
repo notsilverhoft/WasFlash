@@ -10,8 +10,8 @@ A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), d
 ## Goals & Progress - Current Scope
 
 - [ ] Full support without ActionScript
-    - [ ] Gradient Support - Almost Done(Tied to Defineshape4)...
-    - [ ] DefineShape 4 Support
+    - [x] Gradient Support - Almost Done(Tied to Defineshape4)...
+    - [x] DefineShape 4 Support
         - [x] Parse tag
         - [x] Do a little reworking of the shape processor to work with new flags.
         - [x] Add to tag pipeline
