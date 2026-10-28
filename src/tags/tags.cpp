@@ -13,12 +13,15 @@
 #include "tags.h"
 #include "SWFTags/Fileattributes.h"
 #include "SWFTags/DefineVideoStream.h"
-#include "SWFTags/PlaceObject2.h"
+#include "SWFTags/PlaceObject.h"
 #include "SWFTags/VideoFrame.h"
 #include "SWFTags/SoundStreamHead.h"
 #include "SWFTags/SoundStreamBlock.h"
 #include "SWFTags/DefineShape.h"
 #include "SWFTags/DefineMorphShape.h"
+#include "SWFTags/JPEGTables.h"
+#include "SWFTags/DefineBits.h"
+#include "SWFTags/DefineSprite.h"
 #include "../utils/errcodes.h"
 #include "../utils/trackSWF.h"
 #include "../header/header.h"
@@ -28,6 +31,8 @@
 #include "../rendering/audioProcessor.h"
 #include "../rendering/shapeProcessor.h"
 #include "../rendering/morphShapeProcessor.h"
+#include "../rendering/bitmapProcessor.h"
+#include "../rendering/spriteProcessor.h"
 #include "../base/colorTransformAlpha.h"
 #include "SWFTags/AVM/AVM2/doABC.h"
 #include "../../include/skia/include/core/SkColorFilter.h"
@@ -120,6 +125,28 @@ rawSWFTag getSWFTag(std::vector<uint8_t>& SWFFile) {
     return binOut;
 }
 
+static std::unordered_map<int16_t, SWFTag> storedTags;
+
+SWFTag getRemoveObjectTag(rawSWFTag rawTag, int version) {
+
+    SWFTag binOut;
+
+    if ( version == 1 ) {
+
+        SWFShift(rawTag.tagData, 2);
+        binOut.RemoveObject.Depth = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
+
+    }
+
+    if ( version == 2 ) {
+
+        binOut.RemoveObject.Depth = ((rawTag.tagData[1] << 8) | rawTag.tagData[0]);
+
+    }
+
+    return binOut;
+
+}
 
 SWFTag parseSWFTag(rawSWFTag rawTag) {
 
@@ -138,6 +165,24 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
             binOut = getDefineShapeTag(rawTag, 1);
         break;
 
+        case 4:
+            binOut = getPlaceObjectTag(rawTag, 1);
+            binOut.tagCode = 26;
+        break;
+
+        case 5:
+            binOut = getRemoveObjectTag(rawTag, 1);
+        break;
+
+        case 6:
+            binOut = getDefineBitsTag(rawTag, 1, storedTags[-8].JPEGTables.JPEGData);
+        break;
+
+        case 8:
+            binOut = getJPEGTablesTag(rawTag);
+            storedTags[-8] = binOut;
+        break;
+
         case 9:
             binOut.SetBackgroundColor.red   = rawTag.tagData[0];
             binOut.SetBackgroundColor.green = rawTag.tagData[1];
@@ -152,20 +197,40 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
             binOut.SoundStreamBlock.StreamSoundData = rawTag.tagData;
         break;
 
+        case 20:
+            binOut = getDefineBitsTag(rawTag, 5, {});
+        break;
+
+        case 21:
+            binOut = getDefineBitsTag(rawTag, 2, {});
+        break;
+
         case 22:
             binOut = getDefineShapeTag(rawTag, 2);
         break;
 
         case 26:
-            binOut = getPlaceObject2Tag(rawTag);
+            binOut = getPlaceObjectTag(rawTag, 2);
         break;
 
         case 28:
-            binOut.RemoveObject2.Depth = (rawTag.tagData[0]) | (rawTag.tagData[1] << 8);
+            binOut = getRemoveObjectTag(rawTag, 2);
         break;
 
         case 32:
             binOut = getDefineShapeTag(rawTag, 3);
+        break;
+
+        case 35:
+            binOut = getDefineBitsTag(rawTag, 3, {});
+        break;
+
+        case 36:
+            binOut = getDefineBitsTag(rawTag, 6, {});
+        break;
+
+        case 39:
+            binOut = getDefineSpriteTag(rawTag);
         break;
 
         case 45:
@@ -199,6 +264,10 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
         case 84:
             binOut = getDefineMorphShapeTag(rawTag, 2);
         break;
+
+        case 90:
+            binOut = getDefineBitsTag(rawTag, 4, {});
+        break;
     }
 
     binOut.tagCode = rawTag.tagCode;
@@ -207,10 +276,12 @@ SWFTag parseSWFTag(rawSWFTag rawTag) {
 
 struct DisplayListEntry {
     uint16_t characterID;
-    MATRIX   matrix;
+    MATRIX matrix;
     CXFORMWITHALPHA colorTransform;
     bool hasColorTransform = false;
     uint16_t ratio = 0;
+    bool hasClipDepth = false;
+    uint16_t clipDepth = 0;
 };
 
 sk_sp<SkColorFilter> buildColorFilter(const CXFORMWITHALPHA& ct) {
@@ -231,12 +302,75 @@ sk_sp<SkColorFilter> buildColorFilter(const CXFORMWITHALPHA& ct) {
     return SkColorFilters::Matrix(matrix);
 }
 
+std::unordered_map<int16_t, SWFTag> processedTags;
+std::unordered_map<uint16_t, SWFCharacter> savedCharacters;
+
+rendererInstruction buildInstruction(uint16_t characterID, MATRIX matrix, bool hasColorTransform, CXFORMWITHALPHA colorTransform, uint16_t ratio) {
+
+    rendererInstruction instruction;
+
+    instruction.LocalMatrix = matrix;
+    instruction.LocalHasColorTransform = hasColorTransform;
+    instruction.LocalColorTransform = colorTransform;
+
+    if (savedCharacters.find(characterID) == savedCharacters.end()) return instruction;
+    if (processedTags.find((int16_t)characterID) == processedTags.end()) return instruction;
+
+    int characterCode = savedCharacters.at(characterID).code;
+
+    switch (characterCode) {
+
+        case 2:
+        {
+            instruction.instructionCode = 3;
+            instruction.SWFShape = savedCharacters.at(characterID).SWFShape;
+
+            if (hasColorTransform) {
+                instruction.colorFilter = buildColorFilter(colorTransform);
+            }
+
+            instruction.canvasTransform = transformShape(*instruction.SWFShape, matrix);
+        }
+        break;
+
+        case 3:
+
+            instruction.instructionCode = 5;
+            instruction.SWFSprite = savedCharacters.at(characterID).SWFSprite;
+
+            instruction.spriteIsInitial = true;
+
+        break;
+
+        case 4:
+        {
+            instruction.instructionCode = 4;
+            instruction.SWFMorphShapes = savedCharacters.at(characterID).SWFMorphShape;
+
+            instruction.LocalRatio = ratio;
+            instruction.LocalCharacterID = characterID;
+
+            Shape frame = getMorphFrame(*instruction.SWFMorphShapes, ratio);
+
+            if (hasColorTransform) {
+                applyColorTransform(frame, colorTransform);
+            }
+
+            instruction.SWFMorphFrame = std::make_shared<Shape>(std::move(frame));
+            instruction.canvasTransform = transformMorphShape(*instruction.SWFMorphShapes, matrix);
+        }
+        break;
+
+    }
+
+    return instruction;
+
+}
+
 void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv, std::atomic<bool>& running, const SWFHeader& header) {
 
     (void)running;
 
-    std::unordered_map<int16_t, SWFTag>               processedTags;
-    std::unordered_map<uint16_t, SWFCharacter>        savedCharacters;
     std::deque<std::vector<uint8_t>>                  queuedAudioFrames;
     std::deque<rendererInstruction>                   queuedRenderingInstructions;
 
@@ -248,52 +382,16 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
     auto nextFrame = std::chrono::steady_clock::now();
 
-    auto buildInstruction = [&](uint16_t characterID, MATRIX matrix, bool hasColorTransform = false, CXFORMWITHALPHA colorTransform = {}, uint16_t ratio = 0) -> rendererInstruction {
-
-        rendererInstruction instruction;
-
-        if (savedCharacters.find(characterID) == savedCharacters.end()) return instruction;
-        if (processedTags.find((int16_t)characterID) == processedTags.end()) return instruction;
-
-        int characterCode = savedCharacters.at(characterID).code;
-
-        switch (characterCode) {
-
-            case 2:
-            {
-                instruction.instructionCode = 3;
-                instruction.SWFShape = savedCharacters.at(characterID).SWFShape;
-
-                if (hasColorTransform) {
-                    instruction.colorFilter = buildColorFilter(colorTransform);
-                }
-
-                instruction.canvasTransform = transformShape(*instruction.SWFShape, matrix);
+    auto getBitmapMap = [&]() -> std::unordered_map<uint16_t, BitmapStream> {
+        std::unordered_map<uint16_t, BitmapStream> bitmaps;
+        for (auto& [id, character] : savedCharacters) {
+            if (character.code == 6 && character.SWFBitmap.pixels) {
+                bitmaps[id] = character.SWFBitmap;
             }
-            break;
-
-            case 46:
-            case 84:
-            {
-                instruction.instructionCode = 4;
-                instruction.SWFMorphShapes = savedCharacters.at(characterID).SWFMorphShape;
-
-                Shape frame = getMorphFrame(*instruction.SWFMorphShapes, ratio);
-
-                if (hasColorTransform) {
-                    applyColorTransform(frame, colorTransform);
-                }
-
-                instruction.SWFMorphFrame = std::make_shared<Shape>(std::move(frame));
-                instruction.canvasTransform = transformMorphShape(*instruction.SWFMorphShapes, matrix);
-            }
-            break;
-
         }
-
-        return instruction;
-
+        return bitmaps;
     };
+
 
     auto updateTransform = [&](uint16_t depth, MATRIX matrix) {
         if (displayList.find(depth) == displayList.end()) return;
@@ -340,20 +438,222 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                     if (hasBackground)
                         renderStream.push_front(backgroundInstruction);
 
-                    for (auto& [depth, instr] : displayList)
-                        renderStream.push_front(instr);
+                    std::deque<rendererInstruction> clipMarkers;
+                    std::vector<std::pair<uint16_t, rendererInstruction>> rootPendingClips;
+
+                    for (auto& [depth, instr] : displayList) {
+
+                        auto clipEntry = displayListEntries.find(depth);
+
+                        if ( clipEntry != displayListEntries.end() ) {
+
+                            instr.LocalHasClipDepth = clipEntry->second.hasClipDepth;
+                            instr.LocalClipDepth = clipEntry->second.clipDepth;
+
+                        }
+
+                        while ( !rootPendingClips.empty() && depth > rootPendingClips.back().first ) {
+
+                            renderStream.push_front(rootPendingClips.back().second);
+                            rootPendingClips.pop_back();
+
+                        }
+
+                        if ( instr.LocalHasClipDepth ) {
+
+                            rendererInstruction beginMarker;
+                            beginMarker.instructionCode = 6;
+
+                            renderStream.push_front(beginMarker);
+
+                            rendererInstruction endMarker = instr;
+                            endMarker.instructionCode = 7;
+
+                            rootPendingClips.push_back({instr.LocalClipDepth, endMarker});
+
+                            continue;
+
+                        }
+
+                        if ( instr.instructionCode == 5 ) {
+
+                            auto spriteEntry = displayListEntries.find(depth);
+
+                            if ( spriteEntry == displayListEntries.end() ) continue;
+
+                            instr.LocalMatrix = spriteEntry->second.matrix;
+                            instr.LocalHasColorTransform = spriteEntry->second.hasColorTransform;
+                            instr.LocalColorTransform = spriteEntry->second.colorTransform;
+
+                            std::vector<rendererInstruction*> queue;
+                            std::vector<MATRIX> queueParentMatrix;
+                            std::vector<CXFORMWITHALPHA> queueParentColor;
+
+                            queue.push_back(&instr);
+                            queueParentMatrix.push_back(MATRIX());
+                            queueParentColor.push_back(CXFORMWITHALPHA());
+
+                            int popped = 0;
+
+                            while ( !queue.empty() && popped < 10000 ) {
+
+                                rendererInstruction* current = queue.back();
+                                MATRIX parentMatrix = queueParentMatrix.back();
+                                CXFORMWITHALPHA parentColor = queueParentColor.back();
+
+                                queue.pop_back();
+                                queueParentMatrix.pop_back();
+                                queueParentColor.pop_back();
+                                popped++;
+
+                                if ( current->instructionCode == 0 ) continue;
+
+                                MATRIX composedMatrix = combineMatrix(parentMatrix, current->LocalMatrix);
+                                CXFORMWITHALPHA composedColor = combineColorTransform(parentColor, current->LocalHasColorTransform ? current->LocalColorTransform : CXFORMWITHALPHA());
+
+                                if ( current->instructionCode != 5 ) {
+
+                                    rendererInstruction pushed = *current;
+
+                                    if ( pushed.instructionCode == 3 && pushed.SWFShape ) {
+
+                                        pushed.canvasTransform = transformShape(*pushed.SWFShape, composedMatrix);
+
+                                        if ( composedColor.HasMultTerms || composedColor.HasAddTerms ) {
+
+                                            pushed.colorFilter = buildColorFilter(composedColor);
+
+                                        }
+
+                                        else {
+
+                                            pushed.colorFilter = nullptr;
+
+                                        }
+
+                                    }
+
+                                    else if ( pushed.instructionCode == 4 && pushed.SWFMorphShapes ) {
+
+                                        pushed.canvasTransform = transformMorphShape(*pushed.SWFMorphShapes, composedMatrix);
+
+                                    }
+
+                                    renderStream.push_front(pushed);
+                                    continue;
+
+                                }
+
+                                if ( !current->SWFSprite ) continue;
+
+                                if ( current->spriteIsInitial ) {
+
+                                    current->SpriteFrame = std::make_shared<ParsedFrame>(GetParsedSpriteFrame(*current->SWFSprite, savedCharacters, true, ParsedFrame()));
+                                    current->spriteIsInitial = false;
+
+                                }
+
+                                else {
+
+                                    current->SpriteFrame = std::make_shared<ParsedFrame>(GetParsedSpriteFrame(*current->SWFSprite, savedCharacters, false, *current->SpriteFrame));
+
+                                }
+
+                                std::vector<rendererInstruction*> orderedChildren;
+                                std::vector<std::pair<uint16_t, rendererInstruction*>> pendingClips;
+
+                                for (auto it = current->SpriteFrame->depthList.begin(); it != current->SpriteFrame->depthList.end(); ++it) {
+
+                                    while ( !pendingClips.empty() && it->first > pendingClips.back().first ) {
+
+                                        orderedChildren.push_back(pendingClips.back().second);
+                                        pendingClips.pop_back();
+
+                                    }
+
+                                    if ( it->second.LocalHasClipDepth ) {
+
+                                        clipMarkers.push_back(rendererInstruction());
+                                        clipMarkers.back().instructionCode = 6;
+                                        orderedChildren.push_back(&clipMarkers.back());
+
+                                        rendererInstruction endMarker = it->second;
+                                        MATRIX maskMatrix = combineMatrix(composedMatrix, it->second.LocalMatrix);
+
+                                        if ( endMarker.instructionCode == 3 && endMarker.SWFShape ) {
+
+                                            endMarker.canvasTransform = transformShape(*endMarker.SWFShape, maskMatrix);
+
+                                        }
+
+                                        else if ( endMarker.instructionCode == 4 && endMarker.SWFMorphShapes ) {
+
+                                            endMarker.canvasTransform = transformMorphShape(*endMarker.SWFMorphShapes, maskMatrix);
+
+                                        }
+
+                                        endMarker.instructionCode = 7;
+
+                                        clipMarkers.push_back(endMarker);
+                                        pendingClips.push_back({it->second.LocalClipDepth, &clipMarkers.back()});
+
+                                        continue;
+
+                                    }
+
+                                    orderedChildren.push_back(&it->second);
+
+                                }
+
+                                while ( !pendingClips.empty() ) {
+
+                                    orderedChildren.push_back(pendingClips.back().second);
+                                    pendingClips.pop_back();
+
+                                }
+
+                                for (int c = (int)orderedChildren.size() - 1; c >= 0; c--) {
+
+                                    queue.push_back(orderedChildren[c]);
+                                    queueParentMatrix.push_back(composedMatrix);
+                                    queueParentColor.push_back(composedColor);
+
+                                }
+
+                            }
+
+                        }
+
+                        else {
+
+                            renderStream.push_front(instr);
+
+                        }
+
+                    }
+
+                    while ( !rootPendingClips.empty() ) {
+
+                        renderStream.push_front(rootPendingClips.back().second);
+                        rootPendingClips.pop_back();
+
+                    }
 
                     while (!queuedRenderingInstructions.empty()) {
+
                         renderStream.push_front(queuedRenderingInstructions.back());
                         queuedRenderingInstructions.pop_back();
+
                     }
 
                     renderCv.notify_one();
                 }
 
                 while (!queuedAudioFrames.empty()) {
+
                     renderAudioFrame(queuedAudioFrames.back());
                     queuedAudioFrames.pop_back();
+
                 }
 
                 nextFrame += std::chrono::duration_cast<std::chrono::steady_clock::duration>(
@@ -361,13 +661,28 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 );
                 std::this_thread::sleep_until(nextFrame);
             }
+            
             break;
 
             case 2: // DefineShape
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 1))};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 1, false, getBitmapMap()))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
                 nextFrame = std::chrono::steady_clock::now();
+            break;
+
+            case 5: // RemoveObject
+                displayList.erase(tag.RemoveObject.Depth);
+                displayListEntries.erase(tag.RemoveObject.Depth);
+            break;
+
+            case 6: // DefineBits
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 1)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+            break;
+
+            case 8: // JPEGTables
+                processedTags[-8] = tag;
             break;
 
             case 9: // SetBackgroundColor
@@ -395,8 +710,18 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 queuedAudioFrames.push_front(tag.SoundStreamBlock.StreamSoundData);
             break;
 
+            case 20: //DefineBitsLossless
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 5)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+            break;
+
+            case 21: // DefineBits2
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 2)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+            break;
+
             case 22: // DefineShape2
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 2))};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 2, false, getBitmapMap()))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
                 nextFrame = std::chrono::steady_clock::now();
@@ -404,20 +729,26 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
             case 26: // PlaceObject2
             {
-                uint16_t depth = tag.PlaceObject2.Depth;
+                uint16_t depth = tag.PlaceObject.Depth;
 
-                if (tag.PlaceObject2.PlaceFlagHasCharacter) {
+                if (tag.PlaceObject.PlaceFlagHasCharacter) {
 
-                    uint16_t characterID = tag.PlaceObject2.CharacterID;
-                    MATRIX matrix = tag.PlaceObject2.Matrix;
-                    uint16_t ratio = tag.PlaceObject2.Ratio;
+                    uint16_t characterID = tag.PlaceObject.CharacterID;
+                    MATRIX matrix = tag.PlaceObject.Matrix;
+                    uint16_t ratio = tag.PlaceObject.Ratio;
+
+                    if (!tag.PlaceObject.PlaceFlagHasMatrix && displayListEntries.find(depth) != displayListEntries.end()) {
+                        matrix = displayListEntries.at(depth).matrix;
+                    }
 
                     displayListEntries[depth] = {
                         characterID,
                         matrix,
-                        tag.PlaceObject2.ColorTransform,
-                        tag.PlaceObject2.PlaceFlagHasColorTransform,
-                        ratio
+                        tag.PlaceObject.ColorTransform,
+                        tag.PlaceObject.PlaceFlagHasColorTransform,
+                        ratio,
+                        tag.PlaceObject.PlaceFlagHasClipDepth,
+                        tag.PlaceObject.ClipDepth
                     };
 
                     if (processedTags.find((int16_t)characterID) != processedTags.end()) {
@@ -428,39 +759,36 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                             savedCharacters[characterID].xPos = (oldX * matrix.ScaleX + oldY * matrix.RotateSkew1 + matrix.TranslateX) / 20.0f;
                             savedCharacters[characterID].yPos = (oldX * matrix.RotateSkew0 + oldY * matrix.ScaleY  + matrix.TranslateY) / 20.0f;
                         }
-                        else if (tag.PlaceObject2.PlaceFlagHasClipDepth) {
-                            displayListEntries[depth] = {characterID, matrix, {}, false, ratio};
-                        }
                         else if (savedCharacters.find(characterID) != savedCharacters.end()) {
                             displayList[depth] = buildInstruction(characterID, matrix,
-                                tag.PlaceObject2.PlaceFlagHasColorTransform,
-                                tag.PlaceObject2.ColorTransform,
+                                tag.PlaceObject.PlaceFlagHasColorTransform,
+                                tag.PlaceObject.ColorTransform,
                                 ratio);
                         }
                     }
 
-                } else if (tag.PlaceObject2.PlaceFlagMove) {
+                } else if (tag.PlaceObject.PlaceFlagMove) {
 
                     if (displayListEntries.find(depth) != displayListEntries.end()) {
 
                         DisplayListEntry& entry = displayListEntries[depth];
 
                         // Update all changed fields first — multiple flags can be set simultaneously
-                        if (tag.PlaceObject2.PlaceFlagHasMatrix) {
-                            entry.matrix = tag.PlaceObject2.Matrix;
+                        if (tag.PlaceObject.PlaceFlagHasMatrix) {
+                            entry.matrix = tag.PlaceObject.Matrix;
                         }
-                        if (tag.PlaceObject2.PlaceFlagHasColorTransform) {
-                            entry.colorTransform = tag.PlaceObject2.ColorTransform;
+                        if (tag.PlaceObject.PlaceFlagHasColorTransform) {
+                            entry.colorTransform = tag.PlaceObject.ColorTransform;
                             entry.hasColorTransform = true;
                         }
-                        if (tag.PlaceObject2.PlaceFlagHasRatio) {
-                            entry.ratio = tag.PlaceObject2.Ratio;
+                        if (tag.PlaceObject.PlaceFlagHasRatio) {
+                            entry.ratio = tag.PlaceObject.Ratio;
                         }
 
                         // Rebuild instruction if ratio or color transform changed (matrix is baked in),
                         // otherwise just update the canvas transform
-                        bool needsRebuild = tag.PlaceObject2.PlaceFlagHasRatio ||
-                                            tag.PlaceObject2.PlaceFlagHasColorTransform;
+                        bool needsRebuild = tag.PlaceObject.PlaceFlagHasRatio ||
+                                            tag.PlaceObject.PlaceFlagHasColorTransform;
 
                         if (needsRebuild) {
                             if (processedTags.find((int16_t)entry.characterID) != processedTags.end()) {
@@ -470,7 +798,7 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                                         entry.hasColorTransform, entry.colorTransform, entry.ratio);
                                 }
                             }
-                        } else if (tag.PlaceObject2.PlaceFlagHasMatrix) {
+                        } else if (tag.PlaceObject.PlaceFlagHasMatrix) {
                             updateTransform(depth, entry.matrix);
                         }
 
@@ -481,17 +809,40 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
             break;
 
             case 28: // RemoveObject2
-                displayList.erase(tag.RemoveObject2.Depth);
-                displayListEntries.erase(tag.RemoveObject2.Depth);
+                displayList.erase(tag.RemoveObject.Depth);
+                displayListEntries.erase(tag.RemoveObject.Depth);
             break;
 
             case 32: // DefineShape3
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 3))};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 3, false, getBitmapMap()))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
                 nextFrame = std::chrono::steady_clock::now();
             break;
 
+            case 35: // DefineBits3
+
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 3)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+
+            break;
+
+            case 36: // DefineBitsLossless2 
+
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 6)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+                
+                
+            break;
+
+            case 39: // DefineSprite
+
+                savedCharacters[tag.DefineSprite.SpriteID] = {3, 0, 0, nullptr, nullptr, {}, std::make_shared<Sprite>(getSprite(tag))};
+                processedTags[tag.DefineSprite.SpriteID] = tag;
+                nextFrame = std::chrono::steady_clock::now();
+
+            break;
+            
             case 45: // SoundStreamHead2
                 if (tag.SoundStreamHead2.StreamSoundCompression == 2  && header.SWFVersion < 4)  throwErr(451);
                 if (tag.SoundStreamHead2.StreamSoundCompression == 3  && header.SWFVersion < 4)  throwErr(452);
@@ -507,8 +858,8 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
             case 46: // DefineMorphShape
             {
-                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 1));
-                savedCharacters[tag.DefineMorphShape.CharacterId] = {46, 0, 0, nullptr, morphShapes};
+                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 1, getBitmapMap()));
+                savedCharacters[tag.DefineMorphShape.CharacterId] = {4, 0, 0, nullptr, morphShapes};
                 processedTags[tag.DefineMorphShape.CharacterId] = tag;
                 retroactiveUpdate(tag.DefineMorphShape.CharacterId);
                 nextFrame = std::chrono::steady_clock::now();
@@ -558,11 +909,11 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
                 if ((int)tag.FileAttributes.reserved3 != 0) throwErr(691);
                 if ((int)tag.FileAttributes.reserved4 != 0) throwErr(691);
                 if ((int)tag.FileAttributes.reserved5 != 0) throwErr(691);
-                processedTags[(0 - tag.tagCode)] = tag;
+                processedTags[-69] = tag;
             break;
 
             case 83: // DefineShape4
-                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 4, tag.DefineShape.DefineShape4.UsesFillWindingRule))};
+                savedCharacters[tag.DefineShape.ShapeID] = {2, 0, 0, std::make_shared<Shape>(getShape(tag.DefineShape.ShapeBounds, tag.DefineShape.Shapes, 4, tag.DefineShape.DefineShape4.UsesFillWindingRule, getBitmapMap()))};
                 processedTags[tag.DefineShape.ShapeID] = tag;
                 retroactiveUpdate(tag.DefineShape.ShapeID);
                 nextFrame = std::chrono::steady_clock::now();
@@ -570,12 +921,19 @@ void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::conditi
 
             case 84: // DefineMorphShape2
             {
-                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 2));
-                savedCharacters[tag.DefineMorphShape.CharacterId] = {84, 0, 0, nullptr, morphShapes};
+                auto morphShapes = std::make_shared<std::pair<Shape, Shape>>(MorphShapeToShape(tag, 2, getBitmapMap()));
+                savedCharacters[tag.DefineMorphShape.CharacterId] = {4, 0, 0, nullptr, morphShapes};
                 processedTags[tag.DefineMorphShape.CharacterId] = tag;
                 retroactiveUpdate(tag.DefineMorphShape.CharacterId);
                 nextFrame = std::chrono::steady_clock::now();
             }
+            break;
+
+            case 90: //DefineBits4
+            
+                savedCharacters[tag.DefineBits.CharacterID] = {6, 0, 0, nullptr, nullptr, getBitmapStream(tag, 4)};
+                processedTags[tag.DefineBits.CharacterID] = tag;
+            
             break;
 
         }

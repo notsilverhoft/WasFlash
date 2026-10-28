@@ -11,4 +11,4 @@ struct CLIPACTIONS {
 
 };
 
-SWFTag getPlaceObject2Tag(rawSWFTag& rawTag);
+SWFTag getPlaceObjectTag(rawSWFTag& rawTag, int version);

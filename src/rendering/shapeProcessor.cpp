@@ -1,4 +1,3 @@
-// shapeProcessor.cpp
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -12,6 +11,10 @@
 #include "shapeProcessor.h"
 #include "../../include/skia/include/core/SkPaint.h"
 #include "../../include/skia/include/core/SkPathBuilder.h"
+#include "../../include/skia/include/core/SkImage.h"
+#include "../../include/skia/include/core/SkImageInfo.h"
+#include "../../include/skia/include/core/SkPixmap.h"
+#include "bitmapProcessor.h"
 #include "../../include/skia/include/effects/SkGradient.h"
 #include "../../include/skia/include/effects/SkColorMatrix.h"
 #include "../../include/skia/include/core/SkColorFilter.h"
@@ -24,7 +27,7 @@
 #include "../base/shapeRecord.h"
 #include "../base/colorTransformAlpha.h"
 
-std::vector<SkPaint> getSkiaFills(const std::vector<FILLSTYLE>& rawFills, int shapeVersion) {
+std::vector<SkPaint> getSkiaFills(const std::vector<FILLSTYLE>& rawFills, int shapeVersion, const std::unordered_map<uint16_t, BitmapStream>& bitmaps) {
 
     std::vector<SkPaint> binOut;
     binOut.resize(rawFills.size());
@@ -139,7 +142,59 @@ std::vector<SkPaint> getSkiaFills(const std::vector<FILLSTYLE>& rawFills, int sh
             }
 
         }
-        // Bitmap fills (0x40-0x43): not yet renderable — bitmap tags not parsed yet.
+        else if ( CurrentFillStyle.FillStyleType >= 0x40 && CurrentFillStyle.FillStyleType <= 0x43 ) {
+
+            //std::cout << "getSkiaFills: bitmap branch hit, fillIndex=" << i << " FillStyleType=0x" << std::hex << (int)CurrentFillStyle.FillStyleType << std::dec << " BitmapID=" << CurrentFillStyle.BitmapID << " bitmaps.size()=" << bitmaps.size() << "\n";
+
+            auto it = bitmaps.find(CurrentFillStyle.BitmapID);
+
+            // std::cout << "getSkiaFills: lookup " << (it != bitmaps.end() ? "succeeded" : "FAILED") << (it != bitmaps.end() ? (it->second.pixels ? ", pixels non-null" : ", pixels NULL") : "") << "\n";
+
+            if ( it != bitmaps.end() && it->second.pixels ) {
+
+                const BitmapStream& stream = it->second;
+
+                SkAlphaType skAlphaType;
+
+                switch ( stream.alphaMode ) {
+                    case BitmapAlphaMode::Premultiplied:   skAlphaType = kPremul_SkAlphaType;   break;
+                    case BitmapAlphaMode::Unpremultiplied: skAlphaType = kUnpremul_SkAlphaType; break;
+                    default:                               skAlphaType = kOpaque_SkAlphaType;   break;
+                }
+
+                SkImageInfo info = SkImageInfo::Make(stream.width, stream.height, kRGBA_8888_SkColorType, skAlphaType);
+                SkPixmap    pixmap(info, stream.pixels, stream.width * 4);
+
+                sk_sp<SkImage> image = SkImages::RasterFromPixmapCopy(pixmap);
+
+                MATRIX& bm = CurrentFillStyle.BitmapMatrix;
+
+                SkMatrix bitmapMatrix;
+                bitmapMatrix.setAll(
+                    bm.ScaleX / 20.0f,              bm.RotateSkew1,         bm.TranslateX / 20.0f,
+                    bm.RotateSkew0,         bm.ScaleY / 20.0f,               bm.TranslateY / 20.0f,
+                    0,                      0,                        1
+                );
+
+                // 0x41/0x43 = clipped (don't tile), 0x40/0x42 = repeating
+                bool clipped  = (CurrentFillStyle.FillStyleType == 0x41 || CurrentFillStyle.FillStyleType == 0x43);
+                // 0x40/0x41 = smoothed, 0x42/0x43 = non-smoothed
+                bool smoothed = (CurrentFillStyle.FillStyleType == 0x40 || CurrentFillStyle.FillStyleType == 0x41);
+
+                SkTileMode tileMode = clipped ? SkTileMode::kDecal : SkTileMode::kRepeat;
+                SkSamplingOptions sampling(smoothed ? SkFilterMode::kLinear : SkFilterMode::kNearest);
+
+                sk_sp<SkShader> shader = image ? image->makeShader(tileMode, tileMode, sampling, &bitmapMatrix) : nullptr;
+
+                if ( shader ) {
+
+                    binOut[i].setShader(shader);
+
+                }
+
+            }
+
+        }
 
     }
 
@@ -147,7 +202,7 @@ std::vector<SkPaint> getSkiaFills(const std::vector<FILLSTYLE>& rawFills, int sh
 
 }
 
-std::vector<SkPaint> getSkiaLines(const std::vector<LINESTYLE>& rawLines, const std::vector<LINESTYLE2>& rawLines2, int shapeVersion) {
+std::vector<SkPaint> getSkiaLines(const std::vector<LINESTYLE>& rawLines, const std::vector<LINESTYLE2>& rawLines2, int shapeVersion, const std::unordered_map<uint16_t, BitmapStream>& bitmaps) {
 
     std::vector<SkPaint> binOut;
 
@@ -182,7 +237,7 @@ std::vector<SkPaint> getSkiaLines(const std::vector<LINESTYLE>& rawLines, const 
 
             if ( ls.HasFillFlag ) {
                 std::vector<FILLSTYLE> fillVec = { ls.FillType };
-                std::vector<SkPaint> fillPaint = getSkiaFills(fillVec, shapeVersion);
+                std::vector<SkPaint> fillPaint = getSkiaFills(fillVec, shapeVersion, bitmaps);
                 binOut[i] = fillPaint[0];
             } else {
                 binOut[i].setColor(SkColorSetARGB(ls.Alpha, ls.Red, ls.Green, ls.Blue));
@@ -334,8 +389,6 @@ struct PendingPath {
         }
     }
 
-    // noClose mirrors LINESTYLE2.NoClose — suppresses closing even on geometrically
-    // closed segments. A segment is only closed if start==end AND !noClose (matching Ruffle).
     void buildLinePath(SkPathBuilder& builder, bool noClose = false) {
         for (auto& seg : segments) {
             if (seg.isEmpty()) continue;
@@ -357,7 +410,6 @@ struct PendingPath {
                     j++;
                 }
             }
-            // Close only if geometrically closed (start == end) and not suppressed by NoClose
             bool geometricallyClosed = (seg.start() == seg.end());
             if (geometricallyClosed && !noClose) builder.close();
         }
@@ -388,7 +440,7 @@ struct ActivePath {
     }
 };
 
-Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule) {
+Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule, const std::unordered_map<uint16_t, BitmapStream>& bitmaps) {
 
     Shape binOut;
 
@@ -448,7 +500,6 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
 
         flushPaths();
 
-        // Fills for this layer
         std::vector<SkPath>    layerFillPaths;
         std::vector<FILLSTYLE> layerFillStyles;
 
@@ -463,9 +514,8 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
             fills[i].segments.clear();
         }
 
-        auto layerFillPaints = getSkiaFills(layerFillStyles, shapeVersion);
+        auto layerFillPaints = getSkiaFills(layerFillStyles, shapeVersion, bitmaps);
 
-        // Strokes for this layer
         std::vector<SkPath>    layerRawStrokePaths;
         std::vector<LINESTYLE>  layerLineStyles;
         std::vector<LINESTYLE2> layerLineStyles2;
@@ -486,9 +536,8 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
             strokes[i].segments.clear();
         }
 
-        auto layerStrokePaints = getSkiaLines(layerLineStyles, layerLineStyles2, shapeVersion);
+        auto layerStrokePaints = getSkiaLines(layerLineStyles, layerLineStyles2, shapeVersion, bitmaps);
 
-        // Tessellate strokes into filled paths
         std::vector<SkPath>  layerFilledStrokePaths;
         std::vector<SkPaint> layerFilledStrokePaints;
 
@@ -505,8 +554,6 @@ Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersio
         for (int i = 0; i < (int)layerFilledStrokePaths.size(); i++)
             recCanvas->drawPath(layerFilledStrokePaths[i], layerFilledStrokePaints[i]);
     };
-
-    // Shape records processing loop
 
     for (int recordIndex = 0; recordIndex < (int)rawShape.ShapeRecords.size(); recordIndex++) {
 
@@ -616,7 +663,8 @@ Shape getShape(RECT shapeBounds, const SHAPE& rawShape,
                int version,
                const std::vector<FILLSTYLE>& inFillStyles,
                const std::vector<LINESTYLE>& inLineStyles,
-               const std::vector<LINESTYLE2>& inLineStyles2) {
+               const std::vector<LINESTYLE2>& inLineStyles2,
+               const std::unordered_map<uint16_t, BitmapStream>& bitmaps) {
 
     Shape binOut;
 
@@ -659,7 +707,7 @@ Shape getShape(RECT shapeBounds, const SHAPE& rawShape,
             fills[i].segments.clear();
         }
 
-        auto layerFillPaints = getSkiaFills(layerFillStyles, 3);
+        auto layerFillPaints = getSkiaFills(layerFillStyles, 3, bitmaps);
         for (auto& p : layerFillPaints) binOut.Fills.push_back(p);
 
         std::vector<LINESTYLE>  layerLineStyles;
@@ -677,7 +725,7 @@ Shape getShape(RECT shapeBounds, const SHAPE& rawShape,
             strokes[i].segments.clear();
         }
 
-        auto layerStrokePaints = getSkiaLines(layerLineStyles, layerLineStyles2, version < 2 ? 3 : 4);
+        auto layerStrokePaints = getSkiaLines(layerLineStyles, layerLineStyles2, version < 2 ? 3 : 4, bitmaps);
         for (auto& p : layerStrokePaints) binOut.Lines.push_back(p);
     };
 

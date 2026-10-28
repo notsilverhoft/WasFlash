@@ -1,0 +1,10 @@
+prefix=/home/silverhoft/Documents/Projects/WasFlash/libjpeg-turbo-3.1.4.1/build/build
+exec_prefix=/home/silverhoft/Documents/Projects/WasFlash/libjpeg-turbo-3.1.4.1/build/build
+libdir=/home/silverhoft/Documents/Projects/WasFlash/libjpeg-turbo-3.1.4.1/build/build/lib
+includedir=/home/silverhoft/Documents/Projects/WasFlash/libjpeg-turbo-3.1.4.1/build/build/include
+
+Name: libjpeg
+Description: A SIMD-accelerated JPEG codec that provides the libjpeg API
+Version: 3.1.4.1
+Libs: -L${libdir} -ljpeg
+Cflags: -I${includedir}

@@ -10,9 +10,12 @@
 #include <vector>
 #include "../base/rect.h"
 #include "../base/matrix.h"
+#include "../base/colorTransformAlpha.h"
 #include "../../include/skia/include/core/SkColorFilter.h"
 #include "shapeProcessor.h"
 
+struct Sprite;
+struct ParsedFrame;
 struct setBackground {
     uint8_t red;
     uint8_t green;
@@ -38,6 +41,16 @@ struct rendererInstruction : setBackground, drawVideoFrame {
     std::shared_ptr<Shape> SWFShape;
     std::shared_ptr<std::pair<Shape, Shape>> SWFMorphShapes;
     std::shared_ptr<Shape> SWFMorphFrame;
+    std::shared_ptr<Sprite> SWFSprite;
+    std::shared_ptr<ParsedFrame> SpriteFrame;
+    bool spriteIsInitial = true;
+    bool LocalHasColorTransform = false;
+    bool LocalHasClipDepth = false;
+    MATRIX LocalMatrix;
+    CXFORMWITHALPHA LocalColorTransform;
+    uint16_t LocalRatio = 0;
+    uint16_t LocalCharacterID;
+    uint16_t LocalClipDepth = 0;
     SkMatrix canvasTransform = SkMatrix::I();
     sk_sp<SkColorFilter> colorFilter;
 };

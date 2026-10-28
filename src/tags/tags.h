@@ -11,15 +11,25 @@
 #include <unordered_map>
 #include <map>
 #include "SWFTags/Fileattributes.h"
-#include "SWFTags/PlaceObject2.h"
+#include "SWFTags/DefineVideoStream.h"
+#include "SWFTags/PlaceObject.h"
+#include "SWFTags/VideoFrame.h"
+#include "SWFTags/SoundStreamHead.h"
+#include "SWFTags/SoundStreamBlock.h"
+#include "SWFTags/DefineShape.h"
+#include "SWFTags/DefineMorphShape.h"
+#include "SWFTags/JPEGTables.h"
+#include "SWFTags/DefineBits.h"
 #include "SWFTags/AVM/AVM2/doABC.h"
 #include "../base/matrix.h"
 #include "../base/shape.h"
 #include "../base/colorTransformAlpha.h"
 #include "../base/shapeWithStyle.h"
 #include "../base/morphShapeRecord.h"
+#include "../base/bitmaps.h"
 #include "../header/header.h"
 #include "../rendering/renderer.h"
+#include "../rendering/spriteProcessor.h"
 
 struct rawSWFTag {
     uint16_t tagCode;
@@ -37,6 +47,8 @@ struct SWFCharacter {
     int yPos;
     std::shared_ptr<Shape> SWFShape;
     std::shared_ptr<std::pair<Shape, Shape>> SWFMorphShape;
+    BitmapStream SWFBitmap;
+    std::shared_ptr<Sprite> SWFSprite;
 };
 
 // -- Tags -- //
@@ -63,6 +75,61 @@ struct SWFTag {
 
 
     } DefineShape;
+
+    // Tags 6 + 21 + 20 + 35 + 36 + 90 - DefineBits
+
+    struct SWFDefineBitsTag {
+
+        uint16_t CharacterID;
+
+        struct {
+
+            std::vector<uint8_t> JPEGData;
+
+        } DefineBits;
+
+        struct {
+
+            std::vector<uint8_t> ImageData;
+
+        } DefineBitsJPEG2;
+
+        struct {
+
+            uint32_t AlphaDataOffset;
+            std::vector<uint8_t> ImageData;
+            std::vector<uint8_t> BitmapAlphaData;
+
+        } DefineBitsJPEG3;
+
+        struct {
+
+            uint32_t AlphaDataOffset;
+            uint16_t DeblockParam;
+            std::vector<uint8_t> ImageData;
+            std::vector<uint8_t> BitmapAlphaData;
+
+        } DefineBitsJPEG4;
+
+        struct {
+
+            uint8_t BitmapFormat;
+            uint16_t BitmapWidth;
+            uint16_t BitmapHeight;
+            uint8_t BitmapColorTableSize;
+            uint8_t* RawImage;
+
+        } DefineBitsLossless;
+
+    } DefineBits;
+
+    // Tag #8 - JPEGTables 
+
+    struct SWFJPEGTablesTag {
+
+        std::vector<uint8_t> JPEGData;
+
+    } JPEGTables;
 
     // Tag #9 - SetBackgroundColor
 
@@ -97,11 +164,11 @@ struct SWFTag {
 
     // Tag #26 - PlaceObject2
 
-    struct SWFPlaceObject2Tag {
+    struct SWFPlaceObjectTag {
         bool PlaceFlagHasClipActions;
         bool PlaceFlagHasClipDepth;
         bool PlaceFlagHasName;
-        bool PlaceFlagHasRatio;
+        bool PlaceFlagHasRatio = 0;
         bool PlaceFlagHasColorTransform;
         bool PlaceFlagHasMatrix;
         bool PlaceFlagHasCharacter;
@@ -114,12 +181,21 @@ struct SWFTag {
         std::string Name;
         uint16_t ClipDepth;
         CLIPACTIONS ClipActions;
-    } PlaceObject2;
+    } PlaceObject;
 
-    // Tag #28 - RemoveObject2
-    struct SWFRemoveObject2Tag {
+    // Tag #28 - RemoveObject
+    struct SWFRemoveObjectTag {
         uint16_t Depth;
-    } RemoveObject2;
+    } RemoveObject;
+
+    // Tag #39 - DefineSprite 
+    struct SWFDefineSpriteTag {
+
+        uint16_t SpriteID;
+        uint16_t FrameCount;
+        std::vector<SWFTag> ControlTags;
+
+    } DefineSprite;
 
     // Tag #45 - SoundStreamHead2 
 
@@ -202,7 +278,11 @@ struct SWFTag {
     uint16_t tagCode;
 };
 
+ SWFTag getRemoveObjectTag(rawSWFTag rawTag, int version);
+
 SWFTag parseSWFTag(rawSWFTag rawTag);
+
+rendererInstruction buildInstruction(uint16_t characterID, MATRIX matrix, bool hasColorTransform = false, CXFORMWITHALPHA colorTransform = {}, uint16_t ratio = 0);
 
 void processor(std::deque<SWFTag>& stream, std::mutex& streamMutex, std::condition_variable& cv, bool& done, std::deque<rendererInstruction>& renderStream, std::mutex& renderStreamMutex, std::condition_variable& renderCv, std::atomic<bool>& running, const SWFHeader& header);
 

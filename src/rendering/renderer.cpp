@@ -133,7 +133,15 @@ static void renderFrame() {
             break;
 
             case 3:
-                if (!instruction.SWFShape || !instruction.SWFShape->picture) break;
+                if (!instruction.SWFShape || !instruction.SWFShape->picture) {
+                /*    std::cout << "renderer case 3: skipping, shape=" << (bool)instruction.SWFShape
+                              << " picture=" << (instruction.SWFShape ? (bool)instruction.SWFShape->picture : false) << "\n";*/
+                    break;
+                }
+                /*    std::cout << "renderer case 3: drawing picture, transform ScaleX="
+                          << instruction.canvasTransform.getScaleX() << " ScaleY=" << instruction.canvasTransform.getScaleY()
+                          << " TransX=" << instruction.canvasTransform.getTranslateX()
+                          << " TransY=" << instruction.canvasTransform.getTranslateY() << "\n";*/
                 rs.canvas->save();
                 rs.canvas->concat(instruction.canvasTransform);
                 if (instruction.colorFilter) {
@@ -171,6 +179,38 @@ static void renderFrame() {
                 if (instruction.colorFilter)
                     rs.canvas->restore();
 
+                rs.canvas->restore();
+            }
+            break;
+
+            case 6: // Begin Clip
+                rs.canvas->saveLayer(nullptr, nullptr);
+            break;
+
+            case 7: // End Clip
+            {
+                SkPaint maskPaint;
+                maskPaint.setBlendMode(SkBlendMode::kDstIn);
+
+                rs.canvas->saveLayer(nullptr, &maskPaint);
+                rs.canvas->concat(instruction.canvasTransform);
+
+                if (instruction.SWFShape && instruction.SWFShape->picture) {
+
+                    rs.canvas->drawPicture(instruction.SWFShape->picture);
+
+                }
+
+                else if (instruction.SWFMorphFrame) {
+
+                    const Shape& frame = *instruction.SWFMorphFrame;
+
+                    for (int i = 0; i < (int)frame.FillPaths.size(); i++)
+                        rs.canvas->drawPath(frame.FillPaths[i], frame.Fills[i]);
+
+                }
+
+                rs.canvas->restore();
                 rs.canvas->restore();
             }
             break;

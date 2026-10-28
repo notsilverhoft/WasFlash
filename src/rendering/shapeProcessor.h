@@ -17,6 +17,7 @@
 #include "../base/shapeRecord.h"
 #include "../base/shape.h"
 #include "../base/colorTransformAlpha.h"
+#include "bitmapProcessor.h"
 
 
 struct Shape {
@@ -48,8 +49,7 @@ struct Edge {
     int ls = 0;
     int type = 0;
 };
-
-Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule = false);
-Shape getShape(RECT shapeBounds, const SHAPE& rawShape, int version, const std::vector<FILLSTYLE>& inFillStyles, const std::vector<LINESTYLE>& inLineStyles, const std::vector<LINESTYLE2>& inLineStyles2);
+Shape getShape(RECT shapeBounds, const SHAPEWITHSTYLE& rawShape, int shapeVersion, bool usesFillWindingRule, const std::unordered_map<uint16_t, BitmapStream>& bitmaps = {});
+Shape getShape(RECT shapeBounds, const SHAPE& rawShape, int version, const std::vector<FILLSTYLE>& inFillStyles, const std::vector<LINESTYLE>& inLineStyles, const std::vector<LINESTYLE2>& inLineStyles2, const std::unordered_map<uint16_t, BitmapStream>& bitmaps = {});
 void applyColorTransform(Shape& shape, const CXFORMWITHALPHA& ct);
 SkMatrix transformShape(Shape&, MATRIX& TransformMatrix);

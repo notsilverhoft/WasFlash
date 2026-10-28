@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include "../base/shapeRecord.h"
 #include "../base/morphShapeRecord.h"
 #include "shapeProcessor.h"
@@ -9,6 +10,7 @@
 #include "../../include/skia/include/core/SkPath.h"
 #include "../../include/skia/include/core/SkPaint.h"
 #include "../../include/skia/include/core/SkColor.h"
+#include "bitmapProcessor.h"
 #include <cmath>
 
 std::pair<GRADRECORD,GRADRECORD> MorphGradRecordToGradRecord(MORPHGRADRECORD input) {
@@ -180,7 +182,7 @@ std::pair<LINESTYLE2, LINESTYLE2> MorphLine2ToLine2(MORPHLINESTYLE2 input) {
 
 }
 
-std::pair<Shape, Shape> MorphShapeToShape(SWFTag input, int morphShapeVersion) {
+std::pair<Shape, Shape> MorphShapeToShape(SWFTag input, int morphShapeVersion, const std::unordered_map<uint16_t, BitmapStream>& bitmaps) {
 
     std::pair<Shape, Shape> binOut;
 
@@ -253,8 +255,8 @@ std::pair<Shape, Shape> MorphShapeToShape(SWFTag input, int morphShapeVersion) {
 
         }
 
-        binOut.first  = getShape(input.DefineMorphShape.StartBounds, input.DefineMorphShape.StartEdges, 1, Fills1, Lines_1, Lines2_1);
-        binOut.second = getShape(input.DefineMorphShape.EndBounds,   input.DefineMorphShape.EndEdges,   1, Fills2, Lines_2, Lines2_2);
+        binOut.first  = getShape(input.DefineMorphShape.StartBounds, input.DefineMorphShape.StartEdges, 1, Fills1, Lines_1, Lines2_1, bitmaps);
+        binOut.second = getShape(input.DefineMorphShape.EndBounds,   input.DefineMorphShape.EndEdges,   1, Fills2, Lines_2, Lines2_2, bitmaps);
 
     }
 
@@ -269,8 +271,8 @@ std::pair<Shape, Shape> MorphShapeToShape(SWFTag input, int morphShapeVersion) {
 
         }
 
-        binOut.first  = getShape(input.DefineMorphShape.StartBounds, input.DefineMorphShape.StartEdges, 2, Fills1, Lines_1, Lines2_1);
-        binOut.second = getShape(input.DefineMorphShape.EndBounds,   input.DefineMorphShape.EndEdges,   2, Fills2, Lines_2, Lines2_2);
+        binOut.first  = getShape(input.DefineMorphShape.StartBounds, input.DefineMorphShape.StartEdges, 2, Fills1, Lines_1, Lines2_1, bitmaps);
+        binOut.second = getShape(input.DefineMorphShape.EndBounds,   input.DefineMorphShape.EndEdges,   2, Fills2, Lines_2, Lines2_2, bitmaps);
 
     }
 

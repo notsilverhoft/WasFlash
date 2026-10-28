@@ -6,8 +6,8 @@
 struct MATRIX {
     bool HasScale;
     uint8_t nScaleBits;
-    float ScaleX = 0;
-    float ScaleY = 0;
+    float ScaleX = 1;
+    float ScaleY = 1;
     bool HasRotate;
     uint8_t nRotateBits;
     float RotateSkew0 = 0;
@@ -18,3 +18,4 @@ struct MATRIX {
 };
 
 MATRIX getMatrix(std::vector<uint8_t>& data);
+MATRIX combineMatrix(const MATRIX& parent, const MATRIX& child);
