@@ -16,15 +16,8 @@ A (Hopefully) Fully Featured Flash Player Replacement(Say that 10 times fast), d
         - [x] Do a little reworking of the shape processor to work with new flags.
         - [x] Add to tag pipeline
         - [x] Ensure rendering can handle new flags
-    - [ ] Bitmap Support
-        - [ ] DefineBits
-        - [ ] JPEGTables
-        - [ ] DefineBitsJPEG2
-        - [ ] DefineBitsJPEG3
-        - [ ] DefineBitsJPEG4
-        - [ ] DefineBitsLossless
-        - [ ] DefineBitsLossless2
-        - [ ] Impliment into DefineShape Tags.
+    - [x] Bitmap Support
+    - [x] Sprite Support
     - [ ] DefineFont Support
     - [ ] DefineText Support
     - [ ] PlaceCharacter3
