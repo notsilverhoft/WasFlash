@@ -1,7 +1,7 @@
 # WasFlash 
 
 Currently: 
-Currently: An SWF Movie Player that plays typical SWF video like files, and shape only flash animations, with audio! It works for both Linux, and HTML5.
+Currently: An SWF Movie Player that plays typical SWF video like files, and flash animations, with audio! It works for both Linux, and HTML5. Currently, ActionScript and Fonts/Letters are not supported yet
 
 The Hope:
 
